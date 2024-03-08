@@ -1,4 +1,4 @@
-# COMP30024 Artificial Intelligence, Semester 1 2024
+ # COMP30024 Artificial Intelligence, Semester 1 2024
 # Project Partner Nomination
 
 # Fill in your team details here. Be sure to keep a copy of this file for use in
@@ -16,9 +16,9 @@ metadata = {
     # be exactly two members in the list. 
     "team_members": [
         {
-            "name": "",
-            "student_id": "",
-            "email": "" # Must be @student.unimelb.edu.au address
+            "name": "Ella McKercher",
+            "student_id": "1578530",
+            "email": "emckercher@student.unimelb.edu.au" # Must be @student.unimelb.edu.au address
         },
         {
             "name": "David Le",
