@@ -3,6 +3,14 @@
 
 from .core import PlayerColor, Coord, PlaceAction
 from .utils import render_board
+import heapq
+
+# Basic structure of a node to be added to priority queue
+# Still to be modified as going along
+class Node: 
+    def __init__(self, board: dict[Coord, PlayerColor], prevActions: list[PlaceAction]):
+        self.board = board
+        self.prevActions = prevActions
 
 
 def search(
@@ -24,7 +32,14 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
-    
+    priorityQueue = []
+    # To insert into priority queue, 
+    # heapq.heappush(priorityQueue, (priority, Node))
+    # To remove, heapq.heappop(priorityQueue)[1]
+
+    # Create starting node
+    initialNode = Node(board, 4)
+    heapq.heappush(priorityQueue, (0, initialNode)) 
 
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
