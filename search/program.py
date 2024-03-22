@@ -6,7 +6,7 @@ from .utils import render_board
 import heapq
 
 
-tetromino = [(0,0), (1, 0), (2, 0), (3, 0)]
+tetromino = [Coord(0,0), Coord(0, 1), Coord(0, 2), Coord(0, 3)]
 # Basic structure of a node to be added to priority queue
 # Still to be modified as going along
 class Node: 
@@ -44,7 +44,7 @@ def search(
     initialNode = Node(board, 4)
     heapq.heappush(priorityQueue, (0, initialNode)) 
 
-    print(isEmpty(board, Coord(1, 0)))
+    print(validMove(board, Coord(1, 3)))
 
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
@@ -67,20 +67,24 @@ def search(
         PlaceAction(Coord(5, 8), Coord(6, 8), Coord(7, 8), Coord(8, 8)),
     ]
 
-# Needs to be fixed, currently only doing it for one type of tetromino
-# Checks if tetromino can be placed on a particular square in board
+
+# Checks if tetromino can be placed on a particular square in board (Currently only for one tetromino)
 def validMove(board, square: Coord):
     # If square is occupied, return
     if not isEmpty(board, square):
         return False 
     # Check if tetromino can be placed      
     for i in range(4):
+        valid = True
         for j in range(4):
             if i==j: 
                 continue
-            elif isEmpty(board, square.__sub__tetromino[i]):
-                return True
-    return True
+            # Checks if block is filled. If filled, sets it to false
+            elif not isEmpty(board, square - tetromino[i] + tetromino[j]):
+                valid = False
+        if valid:
+            return True        
+    return False
                 
 
 
