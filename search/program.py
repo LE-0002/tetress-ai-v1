@@ -1,7 +1,7 @@
 # COMP30024 Artificial Intelligence, Semester 1 2024
 # Project Part A: Single Player Tetress
 
-from .core import PlayerColor, Coord, PlaceAction
+from .core import PlayerColor, Coord, PlaceAction, Direction
 from .utils import render_board
 
 
@@ -46,36 +46,31 @@ def search(
         PlaceAction(Coord(5, 8), Coord(6, 8), Coord(7, 8), Coord(8, 8)),
     ]
 
-    # Function to find all adjacent spaces to red tokens on board
-    # Returns a list of Coords, if there are no adjacent spaces to a red token returns None
-    def findAdjacent(board: dict[Coord, PlayerColor]):
-        redSpaces = [] 
-        adjacentSpaces = []
+# Function to find all adjacent spaces to red tokens on board
+# Returns a list of Coords, if there are no adjacent spaces to a red token returns None
+def findAdjacent(board: dict[Coord, PlayerColor]):
+    redSpaces = [] 
+    adjacentSpaces = []
 
-        # find all red tokens in board
-        for coord, playercolor in board: 
-            if playercolor.RED == 0: # not sure if this conditional is correct 
-                redSpaces.append(coord) 
-                
-        # find all adjacent spaces to red tokens
-        for coord in redSpaces:
-            for i in range(-1,2): 
-                for j in range(-1,2): 
-                    if (abs(i) == abs(j)): # excludes all diagonals and current red space
-                        continue 
-                    if (isEmpty(board, (coord.r + i, coord.c + j))):
-                        adjacentSpaces.append([coord.r + i, coord.c + j]) # not sure if brackets are correct
+    # find all red tokens in board
+    for coord, playercolor in board.items(): 
+        if board.get(coord) and playercolor.RED == PlayerColor.RED: 
+            redSpaces.append(coord) 
+            
+    # find all adjacent spaces to red tokens
+    for coord in redSpaces:
+        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+        for direction in directions: 
+            if board.get(coord + direction) and coord + direction not in adjacentSpaces:
+                adjacentSpaces.append(coord + direction)
 
-        if adjacentSpaces == []:
-            return None
-        else:
-            return adjacentSpaces 
-    
-    # Checks if square on board is unoccupied
-    # Using this function in findAdjacent so adding it in this branch
-    def isEmpty(board: dict[Coord, PlayerColor], square: Coord):
-    # If occupied
-        if board.get(square, None):
-            return False
-        else: 
-            return True
+    return adjacentSpaces 
+
+# Checks if square on board is unoccupied
+# Using this function in findAdjacent so adding it in this branch
+def isEmpty(board: dict[Coord, PlayerColor], square: Coord):
+# If occupied
+    if board.get(square, None):
+        return False
+    else: 
+        return True
