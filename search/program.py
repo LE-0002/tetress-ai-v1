@@ -1,7 +1,7 @@
 # COMP30024 Artificial Intelligence, Semester 1 2024
 # Project Part A: Single Player Tetress
 
-from .core import PlayerColor, Coord, PlaceAction
+from .core import PlayerColor, Coord, PlaceAction, Direction
 from .utils import render_board
 import heapq
 import math
@@ -84,13 +84,12 @@ def search(
                 print(render_board(newBoard, target, ansi=True))
     print(len(priorityQueue))
    
-
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
     # codes, set the `ansi` flag to True to print a colour-coded version!
     print(render_board(board, target, ansi=True))
 
-
+    printAdjacentSquares(findAdjacent(board))
     # Do some impressive AI stuff here to find the solution...
     # ...
     # ... (your solution goes here!)
@@ -120,7 +119,25 @@ def find_row_segments(board, target):
             segment = [-1, -1]
     
             
-             
+# Function to find all adjacent spaces to red tokens on board
+# Returns a list of Coords, if there are no adjacent spaces to a red token returns None
+def findAdjacent(board: dict[Coord, PlayerColor]):
+    redSpaces = [] 
+    adjacentSpaces = []
+
+    # find all red tokens in board
+    for coord, playercolor in board.items(): 
+        if board.get(coord, None) and playercolor == PlayerColor.RED: 
+            redSpaces.append(coord) 
+            
+    # find all adjacent spaces to red tokens
+    for coord in redSpaces:
+        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+        for direction in directions: 
+            if (isEmpty(board, coord + direction)) and coord + direction not in adjacentSpaces:
+                adjacentSpaces.append(coord + direction)
+
+    return adjacentSpaces           
 
 
 
@@ -169,4 +186,8 @@ def printPlaceAction(items: [PlaceAction]):
     for item in items: 
         print(item.c1, item.c2, item.c3, item.c4)
 
+# For debugging
+def printAdjacentSquares(values):
+    for coord in values:
+        print(coord)
 
