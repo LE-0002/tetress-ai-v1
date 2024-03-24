@@ -35,7 +35,7 @@ def search(
     # ...
     # ... (your solution goes here!)
     # ...
-    
+
     # Here we're returning "hardcoded" actions as an example of the expected
     # output format. Of course, you should instead return the result of your
     # search algorithm. Remember: if no solution is possible for a given input,
@@ -45,3 +45,37 @@ def search(
         PlaceAction(Coord(1, 8), Coord(2, 8), Coord(3, 8), Coord(4, 8)),
         PlaceAction(Coord(5, 8), Coord(6, 8), Coord(7, 8), Coord(8, 8)),
     ]
+
+    # Function to find all adjacent spaces to red tokens on board
+    # Returns a list of Coords, if there are no adjacent spaces to a red token returns None
+    def findAdjacent(board: dict[Coord, PlayerColor]):
+        redSpaces = [] 
+        adjacentSpaces = []
+
+        # find all red tokens in board
+        for coord, playercolor in board: 
+            if playercolor.RED == 0: # not sure if this conditional is correct 
+                redSpaces.append(coord) 
+                
+        # find all adjacent spaces to red tokens
+        for coord in redSpaces:
+            for i in range(-1,2): 
+                for j in range(-1,2): 
+                    if (abs(i) == abs(j)): # excludes all diagonals and current red space
+                        continue 
+                    if (isEmpty(board, (coord.r + i, coord.c + j))):
+                        adjacentSpaces.append([coord.r + i, coord.c + j]) # not sure if brackets are correct
+
+        if adjacentSpaces == []:
+            return None
+        else:
+            return adjacentSpaces 
+    
+    # Checks if square on board is unoccupied
+    # Using this function in findAdjacent so adding it in this branch
+    def isEmpty(board: dict[Coord, PlayerColor], square: Coord):
+    # If occupied
+        if board.get(square, None):
+            return False
+        else: 
+            return True
