@@ -4,8 +4,12 @@
 from .core import PlayerColor, Coord, PlaceAction
 from .utils import render_board
 import heapq
+import math
 
 
+# Suppose that I had a segment given already, [1, 5] for simplicity
+def manhattan(target, square):
+    return math.ceil((abs(target.r - square.r) + abs(target.c - square.c))/4.0)
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
 # I should use rotation instead
@@ -14,10 +18,10 @@ tetrominoes = [
     [Coord(0,0), Coord(1, 0), Coord(2, 0), Coord(3, 0)], # I
     [Coord(0, 0), Coord(0, 1), Coord(1, 0), Coord(1, 1)], # O
     [Coord(0, 0), Coord(0, 1), Coord(0, 2), Coord(1, 1)], # T
-    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(-1%11, 1)], # T
+    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(10, 1)], # T
     [Coord(1, 0), Coord(1, 1), Coord(1, 2), Coord(0, 1)], # T
     [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(1, 1)], # T
-    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(-1%11, 2)], # J
+    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(10, 2)], # J
     [Coord(0, 0), Coord(1, 0), Coord(1, 1), Coord(1, 2)], # J
     [Coord(0, 0), Coord(0, 1), Coord(1, 0), Coord(2, 0)], # J
     [Coord(0, 0), Coord(0, 1), Coord(0, 2), Coord(1, 2)], # J
@@ -69,7 +73,7 @@ def search(
     # Create starting node
     initialNode = Node(board, [])
     heapq.heappush(priorityQueue, (0, initialNode)) 
-
+ 
     # This is just for debugging
     print(validMove(board, Coord(7, 0), tetrominoes[0]))
     for tetromino in tetrominoes:
@@ -103,6 +107,21 @@ def search(
     ]
 
 
+## Need to fix this
+def find_row_segments(board, target):
+    segments = []
+    segment = [-1, -1] # [Initial value, final value]
+    for pos in range(11):
+        if isEmpty(board, Coord(target.r, pos)) and segment[0]==-1:
+            segment[0] = pos
+        elif segment[0]!=-1 and not isEmpty(board, Coord(target.r, pos)):
+            segment[1] = pos-1
+            segments.append(segment)
+            segment = [-1, -1]
+    
+            
+             
+
 
 
 def updateBoard(board, actions: PlaceAction):
@@ -117,7 +136,7 @@ def validMove(board, square: Coord, tetromino: [Coord]):
     total = []
     # If square is occupied, return
     if not isEmpty(board, square):
-        return None
+        return []
     # Check if tetromino can be placed      
     for i in range(4):
         valid = True
