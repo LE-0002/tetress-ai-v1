@@ -9,7 +9,14 @@ import math
 TARGET = Coord(9, 8)
 
 def manhattan(target, square):
-    return math.ceil((abs(target.r - square.r) + abs(target.c - square.c))/4.0)
+    height = abs(target.r - square.r)
+    width = abs(target.c - square.c)
+    if abs(target.r - square.r) > 5:
+        height = (target.r - 11) + square.r
+    if width > 5:
+        width = (target.c - 11) + square.c
+    return math.ceil((width + height) / 4.0)        
+
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
 # I should use rotation instead
@@ -18,17 +25,17 @@ tetrominoes = [
     [Coord(0,0), Coord(1, 0), Coord(2, 0), Coord(3, 0)], # I
     [Coord(0, 0), Coord(0, 1), Coord(1, 0), Coord(1, 1)], # O
     [Coord(0, 0), Coord(0, 1), Coord(0, 2), Coord(1, 1)], # T
-    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(10, 1)], # T
+    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(1, 10)], # T
     [Coord(1, 0), Coord(1, 1), Coord(1, 2), Coord(0, 1)], # T
     [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(1, 1)], # T
-    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(10, 2)], # J
+    [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(2, 10)], # J
     [Coord(0, 0), Coord(1, 0), Coord(1, 1), Coord(1, 2)], # J
     [Coord(0, 0), Coord(0, 1), Coord(1, 0), Coord(2, 0)], # J
     [Coord(0, 0), Coord(0, 1), Coord(0, 2), Coord(1, 2)], # J
     [Coord(0, 0), Coord(1, 0), Coord(2, 0), Coord(2, 1)], # L
     [Coord(0, 0), Coord(0, 1), Coord(0, 2), Coord(1, 0)], # L
     [Coord(0, 0), Coord(0, 1), Coord(1, 1), Coord(2, 1)], # L
-    [Coord(1, 0), Coord(0, 2), Coord(1, 1), Coord(1, 2)], # L
+    [Coord(0, 2), Coord(1, 0), Coord(1, 1), Coord(1, 2)], # L
     [Coord(0, 0), Coord(0, 1), Coord(1, 1), Coord(1, 2)], # Z
     [Coord(0, 1), Coord(1, 0), Coord(1, 1), Coord(2, 0)], # Z
     [Coord(0, 1), Coord(0, 2), Coord(1, 0), Coord(1, 1)], # S
@@ -90,6 +97,7 @@ def search(
             print(count)
             break
         adjacents = findAdjacent(expandedNode[1].board)
+        # printAdjacentSquares(adjacents)
         if not adjacents:
             break
         # Need to fix issue with adjacent squares and tetrominoes loop
@@ -155,7 +163,7 @@ def numInColFilled(board, target):
 
 
 def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
-    return closestSquare(node.board, target) + len(node.prevActions)
+    return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
     
 # Finds distance between closest adjacent square to red and target
 # Not yet considering wrapping of board for simplicity    
@@ -223,13 +231,18 @@ def validMove(board, square: Coord, tetromino: [Coord]):
     # If square is occupied, return
     if not isEmpty(board, square):
         return []
-    # Check if tetromino can be placed      
+    # Check if tetromino can be placed   
+    # i represents orientation
+    # j represents piece filled   
     for i in range(4):
         valid = True
         actions = []
         for j in range(4):
             # Checks if block is filled. If filled, sets it to false
             if not isEmpty(board, square - tetromino[i] + tetromino[j]):
+                valid = False
+            # If block is blue, set it to false    
+            elif board.get(square - tetromino[i] + tetromino[j]) == PlayerColor.BLUE:
                 valid = False
             else: 
                 actions.append(square - tetromino[i] + tetromino[j])
