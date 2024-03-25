@@ -6,8 +6,8 @@ from .utils import render_board
 import heapq
 import math
 
+TARGET = Coord(9, 8)
 
-# Suppose that I had a segment given already, [1, 5] for simplicity
 def manhattan(target, square):
     return math.ceil((abs(target.r - square.r) + abs(target.c - square.c))/4.0)
 
@@ -42,8 +42,9 @@ class Node:
         self.board = board
         self.prevActions = prevActions
 
+    # Need to fix this function
     def __lt__(self, other):
-        return len(self.prevActions) < len(other.prevActions)
+        return numInColFilled(self.board, TARGET) > numInColFilled(other.board, TARGET)
 
 
 def search(
@@ -65,6 +66,7 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
+
     priorityQueue = []
     # To insert into priority queue, 
     # heapq.heappush(priorityQueue, (priority, Node))
@@ -73,23 +75,49 @@ def search(
     # Create starting node
     initialNode = Node(board, [])
     heapq.heappush(priorityQueue, (0, initialNode)) 
- 
+
+    # Will clean up this code, just want to get something working first
+    count = 0
+    # Implementation of search
+    # 
+    while priorityQueue:
+        expandedNode = heapq.heappop(priorityQueue)
+        count += 1
+        print(render_board(expandedNode[1].board, target, ansi=True)) 
+        if expandedNode and checkTarget(expandedNode[1].board, target, False): 
+            print(render_board(expandedNode[1].board, target, ansi=True))
+            printPlaceAction(expandedNode[1].prevActions)
+            print(count)
+            break
+        adjacents = findAdjacent(expandedNode[1].board)
+        if not adjacents:
+            break
+        # Need to fix issue with adjacent squares and tetrominoes loop
+        for adjacent in adjacents:
+            for tetromino in tetrominoes: 
+                if validMove(expandedNode[1].board, adjacent, tetromino):
+                    for item in validMove(expandedNode[1].board, adjacent, tetromino):
+                        newBoard = updateBoard(expandedNode[1].board, item)
+                        heuristicValue = heuristic(expandedNode[1], adjacents, target)
+                        newList = expandedNode[1].prevActions.copy()
+                        newList.append(item)
+                        heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
+    
     # This is just for debugging
-    print(validMove(board, Coord(7, 0), tetrominoes[0]))
-    for tetromino in tetrominoes:
-        if validMove(board, Coord(7, 0), tetromino):
-            for item in validMove(board, Coord(7, 0), tetromino):
-                newBoard = updateBoard(board, item)
-                heapq.heappush(priorityQueue, (0, Node(newBoard, [])))
-                print(render_board(newBoard, target, ansi=True))
-    print(len(priorityQueue))
+    #print(validMove(board, Coord(7, 0), tetrominoes[0]))
+    #for tetromino in tetrominoes:
+       # if validMove(board, Coord(7, 0), tetromino):
+       #     for item in validMove(board, Coord(7, 0), tetromino):
+       #         newBoard = updateBoard(board, item)
+      #          heapq.heappush(priorityQueue, (0, Node(newBoard, [])))
+      #          print(render_board(newBoard, target, ansi=True))
+    #print(len(priorityQueue))
    
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
     # codes, set the `ansi` flag to True to print a colour-coded version!
     print(render_board(board, target, ansi=True))
 
-    printAdjacentSquares(findAdjacent(board))
     # Do some impressive AI stuff here to find the solution...
     # ...
     # ... (your solution goes here!)
@@ -117,8 +145,50 @@ def find_row_segments(board, target):
             segment[1] = pos-1
             segments.append(segment)
             segment = [-1, -1]
+
+def numInColFilled(board, target):
+    count = 0
+    for pos in range(11):
+        if board.get(pos, target.c):
+            count += 1
+    return count        
+
+
+def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
+    return closestSquare(node.board, target) + len(node.prevActions)
     
-            
+# Finds distance between closest adjacent square to red and target
+# Not yet considering wrapping of board for simplicity    
+def closestSquare(board: dict[Coord, PlayerColor], target: Coord):
+    adjacents = findAdjacent(board) 
+    # Will fix this later to not use an array, but keeping it here bcuz it's quick and easy
+    distances = []
+    for square in adjacents:
+        distances.append(manhattan(square, target))
+    return math.ceil(min(distances) / 4.0)
+
+
+
+# Checks if target is removed or entire row or column is filled
+def checkTarget(board: dict[Coord, PlayerColor], target: Coord, row: bool):
+    # If target is removed
+    if not board.get(target):
+        return True
+    
+    for pos in range(11):
+        # If it is empty
+        if row:
+            if not board.get(Coord(target.r, pos)):
+                return False
+        else: 
+            if not board.get(Coord(pos, target.c)):
+                return False        
+
+    return True    
+
+
+
+
 # Function to find all adjacent spaces to red tokens on board
 # Returns a list of Coords, if there are no adjacent spaces to a red token returns None
 def findAdjacent(board: dict[Coord, PlayerColor]):
@@ -136,7 +206,6 @@ def findAdjacent(board: dict[Coord, PlayerColor]):
         for direction in directions: 
             if (isEmpty(board, coord + direction)) and coord + direction not in adjacentSpaces:
                 adjacentSpaces.append(coord + direction)
-
     return adjacentSpaces           
 
 
