@@ -8,6 +8,7 @@ import math
 
 TARGET = Coord(9, 8)
 
+# With wrapping included now
 def manhattan(target, square):
     height = abs(target.r - square.r)
     width = abs(target.c - square.c)
@@ -56,9 +57,11 @@ class Node:
         self.board = board
         self.prevActions = prevActions
 
-    # Need to fix this function
+    # Fixed - might be able to improve on it
     def __lt__(self, other):
-        return numInColFilled(self.board, TARGET) > numInColFilled(other.board, TARGET)
+        min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
+        min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))
+        return min1 < min2
 
 
 def search(
@@ -100,11 +103,10 @@ def search(
         #print(render_board(expandedNode[1].board, target, ansi=True)) 
         if expandedNode and checkTarget(expandedNode[1].board, target, False): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
-            #printPlaceAction(expandedNode[1].prevActions)
-            #print(count)
+            printPlaceAction(expandedNode[1].prevActions)
+            print(count)
             break
         adjacents = findAdjacent(expandedNode[1].board)
-        # printAdjacentSquares(adjacents)
         if not adjacents:
             break
         # Need to fix issue with adjacent squares and tetrominoes loop
@@ -149,61 +151,76 @@ def search(
     ]
 
 
-## Need to fix this
-def find_row_segments(board, target):
-    segments = []
-    segment = [-1, -1] # [Initial value, final value]
-    for pos in range(11):
-        if isEmpty(board, Coord(target.r, pos)) and segment[0]==-1:
-            segment[0] = pos
-        elif segment[0]!=-1 and not isEmpty(board, Coord(target.r, pos)):
-            segment[1] = pos-1
-            segments.append(segment)
-            segment = [-1, -1]
-
-
-# Find column segments, quick not complete version
-def find_col_segments(board, target):
+def find_segments(board, target, row: bool):
     segments = []
     segment = []
-    for pos in range(11):
-        if isEmpty(board, Coord(pos, target.c)) and not segment: 
-            segment.append(pos)
-            if pos==10:
-                segment.append(pos)
-        elif pos!=0 and not isEmpty(board, Coord(pos, target.c)) and isEmpty(board, Coord(pos-1, target.c)) :
-            segment.append(pos)
-            segments.append(segment)
-            segment = []
-        else: 
+    # Default value
+
+    # will fix magic numbers
+    for pos in range(22):
+        if row: 
+            square = Coord(target.r, pos%11)
+            prevSquare = Coord(target.r, (pos-1)%11)
+        else:
+            square = Coord(pos%11, target.c)
+            prevSquare = Coord((pos-1)%11, target.c)    
+        # if square is empty and previous square is not empty
+        if not board.get(square) and board.get(prevSquare):
+            segment.append(pos%11)
+        # if previous square was empty and current square is not empty
+        elif board.get(square) and not board.get(prevSquare):
+            segment.append((pos-1)%11)
+            if segment not in segments:
+                segments.append(segment)
+            segment = []    
+        else:
             continue
-    return segments 
+    return segments                   
 
 
-# For columns only at the moment
-def dist_to_segment(board, target, segment):
+ # for rows and columns
+def dist_to_segment2(board, target, segment, row):
     distances = []
+    # WIll be a bug here
     for pos in range(segment[0], segment[1] + 1):
-        distances.append(closestSquare(board, Coord(target.r, pos)))
+        if row:
+            square = Coord(target.r, pos)
+        else: 
+            square = Coord(pos, target.c)
+        distances.append(closestSquare(board, square))
     return (min(distances) + segment[1] - segment[0] + 1)//4 + (min(distances) + segment[1] - segment[0] + 1)%4
+   
 
 
 
 
-def numInColFilled(board, target):
+# Returns number to be filled in row or column
+def toBeFilled(board, target, row):
     count = 0
     for pos in range(11):
-        if board.get(pos, target.c):
+        if row:
+            square = Coord(target.r, pos)
+        else: 
+            square = Coord(pos, target.c)
+        if not board.get(square):
             count += 1
-    return 11 - count        
+    return count        
+     
 
 
 def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
-    segments = find_col_segments(node.board, target)
+    segments = find_segments(node.board, target, False)
     value = 0
     for segment in segments:
-        value += dist_to_segment(node.board, target, segment)
-    return value + len(node.prevActions)
+        value += dist_to_segment2(node.board, target, segment, False)
+    return value + len(node.prevActions)    
+    
+    
+    #segments = find_col_segments(node.board, target)
+    #value = 0
+    #for segment in segments:
+    #    value += dist_to_segment(node.board, target, segment)
+    #return value + len(node.prevActions)
     #return closestSquare2(node.board, target) + len(node.prevActions) + numInColFilled(node.board, target) // 4
     #return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
     
@@ -324,5 +341,5 @@ def printAdjacentSquares(values):
         print(coord)
 
 
-# 36 nodes, 
-# 93 nodes
+
+# 26 nodes now explored for test case 1, takes less than 3 seconds 
