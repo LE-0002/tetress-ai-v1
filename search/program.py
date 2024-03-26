@@ -15,7 +15,14 @@ def manhattan(target, square):
         height = (target.r - 11) + square.r
     if width > 5:
         width = (target.c - 11) + square.c
-    return math.ceil((width + height) / 4.0)        
+    return math.ceil((width + height) / 4.0) 
+
+# For segments, instead of just considering position
+def manhattan2(target, square):
+    width = abs(target.c - square.c)
+    if width > 5:
+        width = (target.r - 11) + square.c
+    return math.ceil((width) / 4.0)              
 
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
@@ -90,11 +97,11 @@ def search(
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        print(render_board(expandedNode[1].board, target, ansi=True)) 
+        #print(render_board(expandedNode[1].board, target, ansi=True)) 
         if expandedNode and checkTarget(expandedNode[1].board, target, False): 
-            print(render_board(expandedNode[1].board, target, ansi=True))
-            printPlaceAction(expandedNode[1].prevActions)
-            print(count)
+            #print(render_board(expandedNode[1].board, target, ansi=True))
+            #printPlaceAction(expandedNode[1].prevActions)
+            #print(count)
             break
         adjacents = findAdjacent(expandedNode[1].board)
         # printAdjacentSquares(adjacents)
@@ -124,7 +131,7 @@ def search(
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
     # codes, set the `ansi` flag to True to print a colour-coded version!
-    print(render_board(board, target, ansi=True))
+    #print(render_board(board, target, ansi=True))
 
     # Do some impressive AI stuff here to find the solution...
     # ...
@@ -154,16 +161,51 @@ def find_row_segments(board, target):
             segments.append(segment)
             segment = [-1, -1]
 
+
+# Find column segments, quick not complete version
+def find_col_segments(board, target):
+    segments = []
+    segment = []
+    for pos in range(11):
+        if isEmpty(board, Coord(pos, target.c)) and not segment: 
+            segment.append(pos)
+            if pos==10:
+                segment.append(pos)
+        elif pos!=0 and not isEmpty(board, Coord(pos, target.c)) and isEmpty(board, Coord(pos-1, target.c)) :
+            segment.append(pos)
+            segments.append(segment)
+            segment = []
+        else: 
+            continue
+    return segments 
+
+
+# For columns only at the moment
+def dist_to_segment(board, target, segment):
+    distances = []
+    for pos in range(segment[0], segment[1] + 1):
+        distances.append(closestSquare(board, Coord(target.r, pos)))
+    return (min(distances) + segment[1] - segment[0] + 1)//4 + (min(distances) + segment[1] - segment[0] + 1)%4
+
+
+
+
 def numInColFilled(board, target):
     count = 0
     for pos in range(11):
         if board.get(pos, target.c):
             count += 1
-    return count        
+    return 11 - count        
 
 
 def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
-    return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
+    segments = find_col_segments(node.board, target)
+    value = 0
+    for segment in segments:
+        value += dist_to_segment(node.board, target, segment)
+    return value + len(node.prevActions)
+    #return closestSquare2(node.board, target) + len(node.prevActions) + numInColFilled(node.board, target) // 4
+    #return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
     
 # Finds distance between closest adjacent square to red and target
 # Not yet considering wrapping of board for simplicity    
@@ -176,6 +218,14 @@ def closestSquare(board: dict[Coord, PlayerColor], target: Coord):
     return math.ceil(min(distances) / 4.0)
 
 
+## different version
+## more efficient, currently only for column
+def closestSquare2(board, target):
+    adjacents = findAdjacent(board)
+    distances = []
+    for square in adjacents: 
+        distances.append(manhattan2(square, target))
+    return math.ceil(min(distances) / 4.0)
 
 # Checks if target is removed or entire row or column is filled
 def checkTarget(board: dict[Coord, PlayerColor], target: Coord, row: bool):
@@ -273,3 +323,6 @@ def printAdjacentSquares(values):
     for coord in values:
         print(coord)
 
+
+# 36 nodes, 
+# 93 nodes
