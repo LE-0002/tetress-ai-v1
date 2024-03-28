@@ -6,7 +6,7 @@ from .utils import render_board
 import heapq
 import math
 
-TARGET = Coord(9, 8)
+TARGET = Coord(5, 4)
 
 # With wrapping included now
 def manhattan(target, square):
@@ -83,6 +83,7 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
+    TARGET = target
 
     priorityQueue = []
     # To insert into priority queue, 
@@ -100,10 +101,11 @@ def search(
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        #print(render_board(expandedNode[1].board, target, ansi=True)) 
+        print(render_board(expandedNode[1].board, target, ansi=True)) 
+        print(find_segments(expandedNode[1].board, target, False))
         if expandedNode and checkTarget(expandedNode[1].board, target, False): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
-            printPlaceAction(expandedNode[1].prevActions)
+            #printPlaceAction(expandedNode[1].prevActions)
             print(count)
             break
         adjacents = findAdjacent(expandedNode[1].board)
@@ -151,45 +153,78 @@ def search(
     ]
 
 
+# This function is very buggy
 def find_segments(board, target, row: bool):
     segments = []
     segment = []
-    # Default value
-
-    # will fix magic numbers
-    for pos in range(22):
+    initialSegment = []
+    for pos in range(11):
         if row: 
             square = Coord(target.r, pos%11)
-            prevSquare = Coord(target.r, (pos-1)%11)
+            nextSquare = Coord(target.r, (pos+1)%11)
+            
         else:
             square = Coord(pos%11, target.c)
-            prevSquare = Coord((pos-1)%11, target.c)    
-        # if square is empty and previous square is not empty
-        if not board.get(square) and board.get(prevSquare):
-            segment.append(pos%11)
-        # if previous square was empty and current square is not empty
-        elif board.get(square) and not board.get(prevSquare):
-            segment.append((pos-1)%11)
-            if segment not in segments:
+            nextSquare = Coord((pos+1)%11, target.c)    
+        
+        # if this is the first
+        if not pos: 
+            if not board.get(square):
+                initialSegment.append(pos)
+            elif not board.get(nextSquare):
+                segment.append(pos+1)
+
+         
+        if len(initialSegment)==1 and not board.get(square) and board.get(nextSquare):
+            initialSegment.append(pos)
+        elif pos:
+            # if current square is not empty and next square is empty
+            if board.get(square) and not board.get(nextSquare):
+                segment.append(pos+1)
+            # if current square is empty and next square is not empty
+            elif not board.get(square) and board.get(nextSquare):
+                segment.append(pos)
                 segments.append(segment)
-            segment = []    
+                segment = []
+            else:
+                continue
         else:
-            continue
-    return segments                   
+            continue        
+
+    if row: 
+        firstSquare = Coord(target.r, 0)
+        lastSquare = Coord(target.r, 10)
+    else:
+        firstSquare = Coord(0, target.c)
+        lastSquare = Coord(10, target.c) 
+    # if first square and last square are both empty 
+    if not board.get(firstSquare) and not board.get(lastSquare):
+        segment.append(initialSegment[1])
+        segments.append(segment)
+    elif initialSegment:
+        segments.append(initialSegment) 
+    
+
+    return segments       
 
 
  # for rows and columns
 def dist_to_segment2(board, target, segment, row):
     distances = []
     # WIll be a bug here
-    for pos in range(segment[0], segment[1] + 1):
+    upperBound = segment[1] 
+    lowerBound = segment[0]
+    if segment[0] > segment[1]:
+        upperBound = segment[1] + 11
+
+
+    for pos in range(lowerBound, upperBound + 1):
         if row:
-            square = Coord(target.r, pos)
+            square = Coord(target.r, pos%11)
         else: 
-            square = Coord(pos, target.c)
+            square = Coord(pos%11, target.c)
         distances.append(closestSquare(board, square))
-    return (min(distances) + segment[1] - segment[0] + 1)//4 + (min(distances) + segment[1] - segment[0] + 1)%4
-   
+    return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0) 
 
 
 
@@ -212,7 +247,8 @@ def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
     segments = find_segments(node.board, target, False)
     value = 0
     for segment in segments:
-        value += dist_to_segment2(node.board, target, segment, False)
+        if segment:
+            value += dist_to_segment2(node.board, target, segment, False)
     return value + len(node.prevActions)    
     
     
