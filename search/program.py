@@ -102,7 +102,7 @@ def search(
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
         print(render_board(expandedNode[1].board, target, ansi=True)) 
-        print(find_segments(expandedNode[1].board, target, False))
+        print(  )
         if expandedNode and checkTarget(expandedNode[1].board, target, False): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             #printPlaceAction(expandedNode[1].prevActions)
@@ -117,9 +117,10 @@ def search(
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
                         newBoard = updateBoard(expandedNode[1].board, item)
-                        heuristicValue = heuristic(expandedNode[1], adjacents, target)
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
+                        newNode = Node(newBoard, newList)
+                        heuristicValue = heuristic(newNode, adjacents, target)
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
     
     # This is just for debugging
@@ -268,6 +269,8 @@ def closestSquare(board: dict[Coord, PlayerColor], target: Coord):
     distances = []
     for square in adjacents:
         distances.append(manhattan(square, target))
+    if not distances: 
+        return 0    
     return math.ceil(min(distances) / 4.0)
 
 
