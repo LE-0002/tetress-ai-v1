@@ -284,15 +284,48 @@ def findAdjacent(board: dict[Coord, PlayerColor]):
     return adjacentSpaces 
 
 
-def updateRowCol(board, target, row):
-    if toBeFilled == 0:
-        for coord, playercolor in board.items: 
-            if row:
-                if coord.r == target.r:
-                    board.pop(coord)
-            if not row:
-                if coord.c == target.c:
-                    board.pop(coord)
+# function that deletes full rows or columns and returns an updated board
+# ROUGH DRAFT function is very tedious, just wanted to get main idea down WILL UPDATE!
+def updateRowCol(board: dict[Coord, PlayerColor]):
+    tempBoard = board.copy() 
+    foundEmpty = False 
+    row2Replace = []
+    col2Replace = []
+    
+    #find full rows
+    for row in range(11):
+        for col in range(11):
+            if isEmpty(board, Coord(row,col)): 
+                foundEmpty = True
+                continue 
+        if not foundEmpty and row not in row2Replace: 
+            row2Replace.append(row)
+            foundEmpty = False
+
+    foundEmpty = False # reset
+    
+    # need to combine finding full row and columns so only one nested loop in function
+    # find full columns
+    for col in range(11):
+        for row in range(11):
+            if isEmpty(board, Coord(row,col)):
+                foundEmpty = True
+                continue 
+        if not foundEmpty and col not in col2Replace: 
+            col2Replace.append(col)
+            foundEmpty = False
+
+    # "delete" full rows
+    for row in row2Replace:
+        for i in range(11):
+            tempBoard.update({Coord(row,i): None})
+
+    # "delete" full columns
+    for col in col2Replace:
+        for i in range(11):
+            tempBoard.update({Coord(i,col): None})
+    
+    return tempBoard
 
 
 def updateBoard(board, actions: PlaceAction):
@@ -349,7 +382,5 @@ def printPlaceAction(items: [PlaceAction]):
 def printAdjacentSquares(values):
     for coord in values:
         print(coord)
-
-
 
 # 26 nodes now explored for test case 1, takes less than 3 seconds 
