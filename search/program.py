@@ -61,7 +61,8 @@ class Node:
     def __lt__(self, other):
         min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
         min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))
-        return min1 < min2
+        return math.ceil(min1/4.0) - len(self.prevActions) < math.ceil(min2/4.0) - len(other.prevActions)
+        #return min1*22 + dist(self.board, TARGET) < min2*22 + dist(other.board, TARGET) 
 
 
 def search(
@@ -111,7 +112,8 @@ def search(
             print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
-        print(heuristic(expandedNode[1], adjacents, target)-len(expandedNode[1].prevActions))
+        #print(heuristic(expandedNode[1], adjacents, target))
+        #print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
             break
         # Need to fix issue with adjacent squares and tetrominoes loop
@@ -212,14 +214,13 @@ def dist_to_segment2(board, target, segment, row):
     if segment[0] > segment[1]:
         upperBound = segment[1] + 11
 
-
     for pos in range(lowerBound, upperBound + 1):
         if row:
             square = Coord(target.r, pos%11)
         else: 
             square = Coord(pos%11, target.c)
         distances.append(closestSquare(board, square))
-    return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0) 
+    return math.ceil((min(distances) + upperBound - lowerBound+1)/4.0) 
 
 
 
@@ -248,6 +249,7 @@ def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
     for colSegment in colSegments:
         if colSegment: 
            colValue += dist_to_segment2(node.board, target, colSegment, False)
+    
     return min(rowValue, colValue) + len(node.prevActions)    
     
     
@@ -375,16 +377,44 @@ def printAdjacentSquares(values):
         print(coord)
 
 
-# Finds average distance between adjacents to segments
+#Finds average distance between adjacents to segments
 #def avgDistance(board, target):
  #   adjacents = findAdjacent(board)
- #   colSegments = find_segments(board, target, row=False)
- #   rowSegments = find_segments(board, target, row=True)
- #   rowValue, colValue = 0, 0
-  #  for adjacent in adjacents:
-   #     for rowSegment in rowSegments: 
-   #         rowValue += manhattan(adjacent, )
-    #        rowValue = dist_to_segment2(board, target, rowSegment, row=True)
+  #  colSegments = find_segments(board, target, row=False)
+    #rowSegments = find_segments(board, target, row=True)
+   # rowValue, colValue = 0, 0
+   # for adjacent in adjacents:
+    #    for colSegment in colSegments: 
+     #       colValue += manhattan3(adjacent, colSegment, target)
+            #rowValue = dist_to_segment2(board, target, rowSegment, row=True)
+   # return colValue / float(len(adjacents))       
 
 
+# helper function for column only so far
+#def manhattan3(adjacent, segment, target):
+ #   pos = segment[0]
+  #  distances = []
+   # while (pos%11 != (segment[1] + 1)%11):
+    #    distances.append(manhattan(Coord(pos%11, target.c), adjacent))
+     #   pos += 1
+    #return min(distances)
 
+# Find all red squares and takes average distance to get to target row or column
+def dist(board, target):
+    dist = 0
+    redSquares = 0
+    for coord, playercolor in board.items():
+        if board.get(coord) and board.get(coord)==PlayerColor.RED:
+            redSquares += 1
+            dist += min(manhattan(coord, Coord(target.r, coord.c)), manhattan(coord, Coord(coord.r, target.c)))
+    return dist / float(redSquares)       
+
+
+#def onRed(board, target):
+ #   adjacents = findAdjacent(board)  
+  #  if not adjacents:
+   #     return 0        
+   # for adjacent in adjacents: 
+    #    if adjacent.r==target.r or adjacent.c==target.c:
+     #       return 1
+    #return 0        
