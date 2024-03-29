@@ -6,7 +6,7 @@ from .utils import render_board
 import heapq
 import math
 
-TARGET = Coord(5, 4)
+TARGET = Coord(9, 8)
 
 # With wrapping included now
 def manhattan(target, square):
@@ -101,9 +101,7 @@ def search(
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        print(render_board(expandedNode[1].board, target, ansi=True)) 
-        print(  )
-        if expandedNode and checkTarget(expandedNode[1].board, target, False): 
+        if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             #printPlaceAction(expandedNode[1].prevActions)
             print(count)
@@ -245,12 +243,16 @@ def toBeFilled(board, target, row):
 
 
 def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
-    segments = find_segments(node.board, target, False)
-    value = 0
-    for segment in segments:
-        if segment:
-            value += dist_to_segment2(node.board, target, segment, False)
-    return value + len(node.prevActions)    
+    rowSegments = find_segments(node.board, target, row=True)
+    colSegments = find_segments(node.board, target, row=False)
+    rowValue, colValue = 0, 0
+    for rowSegment in rowSegments:
+        if rowSegment:
+            rowValue += dist_to_segment2(node.board, target, rowSegment, True)
+    for colSegment in colSegments:
+        if colSegment: 
+            colValue += dist_to_segment2(node.board, target, colSegment, False)
+    return min(rowValue, colValue) + len(node.prevActions)    
     
     
     #segments = find_col_segments(node.board, target)
@@ -284,22 +286,39 @@ def closestSquare2(board, target):
     return math.ceil(min(distances) / 4.0)
 
 # Checks if target is removed or entire row or column is filled
-def checkTarget(board: dict[Coord, PlayerColor], target: Coord, row: bool):
+#def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
+    # If target is removed
+ #   if not board.get(target):
+  #      return True
+    
+   # for pos in range(11):
+        # If it is empty
+    #    if not board.get(Coord(target.r, pos)): 
+     #       return False   
+      #  elif not board.get(Coord(pos, target.c)):
+       #     return False
+        #else: 
+         #   continue        
+
+    #return True    
+
+
+
+
+def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
     # If target is removed
     if not board.get(target):
         return True
-    
+    row = True
+    column = True
     for pos in range(11):
         # If it is empty
-        if row:
-            if not board.get(Coord(target.r, pos)):
-                return False
-        else: 
-            if not board.get(Coord(pos, target.c)):
-                return False        
-
-    return True    
-
+        if not board.get(Coord(target.r, pos)):
+            row = False
+        if not board.get(Coord(pos, target.c)):
+            column = False    
+    return column or row
+        
 
 
 
