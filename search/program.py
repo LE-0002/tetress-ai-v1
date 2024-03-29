@@ -8,14 +8,13 @@ import math
 
 TARGET = Coord(0, 0)
 
-# With wrapping included now
 def manhattan(target, square):
     height = abs(target.r - square.r)
     width = abs(target.c - square.c)
-    if abs(target.r - square.r) > 5:
-        height = (target.r - 11) + square.r
+    if height > 5:
+        height = 11 - max(target.r, square.r) + min(target.r, square.r)
     if width > 5:
-        width = (target.c - 11) + square.c
+        width = 11 - max(target.c, square.c) + min(target.c, square.c)
     return math.ceil((width + height) / 4.0) 
 
 # For segments, instead of just considering position
@@ -61,7 +60,8 @@ class Node:
     def __lt__(self, other):
         min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
         min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))
-        return min1 < min2
+        return math.ceil(min1/4.0) - len(self.prevActions) < math.ceil(min2/4.0) - len(other.prevActions)
+        #return min1*22 + dist(self.board, TARGET) < min2*22 + dist(other.board, TARGET) 
 
 
 
@@ -84,7 +84,8 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
-    
+    # Set target
+    TARGET = target
 
     priorityQueue = []
     # To insert into priority queue, 
@@ -99,16 +100,20 @@ def search(
     count = 0
     # Implementation of search
     # 
+    generatedCount = 1
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        #print(render_board(expandedNode[1].board, target, ansi=True)) 
-        if expandedNode and checkTarget(expandedNode[1].board, target, False): 
+        print(render_board(expandedNode[1].board, target, ansi=True))
+        if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             printPlaceAction(expandedNode[1].prevActions)
-            print(count)
+            print("expanded nodes: " + str(count))
+            print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
+        #print(heuristic(expandedNode[1], adjacents, target))
+        #print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
             break
         # Need to fix issue with adjacent squares and tetrominoes loop
@@ -116,28 +121,18 @@ def search(
             for tetromino in tetrominoes: 
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
+                        generatedCount += 1
                         newBoard = updateBoard(expandedNode[1].board, item)
-                        heuristicValue = heuristic(expandedNode[1], adjacents, target)
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
+                        newNode = Node(newBoard, newList)
+                        heuristicValue = heuristic(newNode, adjacents, target)
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
-    
-    # This is just for debugging
-    #print(validMove(board, Coord(7, 0), tetrominoes[0]))
-    #for tetromino in tetrominoes:
-       # if validMove(board, Coord(7, 0), tetromino):
-       #     for item in validMove(board, Coord(7, 0), tetromino):
-       #         newBoard = updateBoard(board, item)
-      #          heapq.heappush(priorityQueue, (0, Node(newBoard, [])))
-      #          print(render_board(newBoard, target, ansi=True))
-    #print(len(priorityQueue))
-   
-
 
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
     # codes, set the `ansi` flag to True to print a colour-coded version!
-    print(render_board(board, target, ansi=True))
+    #print(render_board(board, target, ansi=True))
 
     # Do some impressive AI stuff here to find the solution...
     # ...
@@ -155,44 +150,79 @@ def search(
     ]
 
 
+# This function is very buggy
 def find_segments(board, target, row: bool):
     segments = []
     segment = []
-    # Default value
-
-    # will fix magic numbers
-    for pos in range(22):
+    initialSegment = []
+    for pos in range(11):
         if row: 
             square = Coord(target.r, pos%11)
-            prevSquare = Coord(target.r, (pos-1)%11)
+            nextSquare = Coord(target.r, (pos+1)%11)
+            
         else:
             square = Coord(pos%11, target.c)
-            prevSquare = Coord((pos-1)%11, target.c)    
-        # if square is empty and previous square is not empty
-        if not board.get(square) and board.get(prevSquare):
-            segment.append(pos%11)
-        # if previous square was empty and current square is not empty
-        elif board.get(square) and not board.get(prevSquare):
-            segment.append((pos-1)%11)
-            if segment not in segments:
+            nextSquare = Coord((pos+1)%11, target.c)    
+        
+        # if this is the first
+        if not pos: 
+            if not board.get(square):
+                initialSegment.append(pos)
+            elif not board.get(nextSquare):
+                segment.append(pos+1)
+
+         
+        if len(initialSegment)==1 and not board.get(square) and board.get(nextSquare):
+            initialSegment.append(pos)
+        elif pos:
+            # if current square is not empty and next square is empty
+            if board.get(square) and not board.get(nextSquare):
+                segment.append(pos+1)
+            # if current square is empty and next square is not empty
+            elif not board.get(square) and board.get(nextSquare):
+                segment.append(pos)
                 segments.append(segment)
-            segment = []    
+                segment = []
+            else:
+                continue
         else:
-            continue
-    return segments 
+            continue        
+
+    if row: 
+        firstSquare = Coord(target.r, 0)
+        lastSquare = Coord(target.r, 10)
+    else:
+        firstSquare = Coord(0, target.c)
+        lastSquare = Coord(10, target.c) 
+    # if first square and last square are both empty 
+    if not board.get(firstSquare) and not board.get(lastSquare):
+        segment.append(initialSegment[1])
+        segments.append(segment)
+    elif initialSegment:
+        segments.append(initialSegment) 
+    
+
+    return segments    
 
 
  # for rows and columns
 def dist_to_segment2(board, target, segment, row):
     distances = []
-    # WIll be a bug here
-    for pos in range(segment[0], segment[1] + 1):
+
+    upperBound = segment[1] 
+    lowerBound = segment[0]
+    if segment[0] > segment[1]:
+        upperBound = segment[1] + 11
+
+    for pos in range(lowerBound, upperBound + 1):
         if row:
-            square = Coord(target.r, pos)
+            square = Coord(target.r, pos%11)
         else: 
-            square = Coord(pos, target.c)
+            square = Coord(pos%11, target.c)
         distances.append(closestSquare(board, square))
-    return (min(distances) + segment[1] - segment[0] + 1)//4 + (min(distances) + segment[1] - segment[0] + 1)%4
+    return math.ceil((min(distances) + upperBound - lowerBound+1)/4.0) 
+
+
 
 
 # Returns number to be filled in row or column
@@ -210,12 +240,18 @@ def toBeFilled(board, target, row):
 
 
 def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
-    segments = find_segments(node.board, target, False)
-    value = 0
-    for segment in segments:
-        value += dist_to_segment2(node.board, target, segment, False)
-    return value + len(node.prevActions)
-
+    rowSegments = find_segments(node.board, target, row=True)
+    colSegments = find_segments(node.board, target, row=False)
+    rowValue, colValue = 0, 0
+    for rowSegment in rowSegments:
+        if rowSegment:
+            rowValue += dist_to_segment2(node.board, target, rowSegment, True)
+    for colSegment in colSegments:
+        if colSegment: 
+           colValue += dist_to_segment2(node.board, target, colSegment, False)
+    
+    return min(rowValue, colValue) + len(node.prevActions)    
+    
     
     #segments = find_col_segments(node.board, target)
     #value = 0
@@ -225,14 +261,15 @@ def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
     #return closestSquare2(node.board, target) + len(node.prevActions) + numInColFilled(node.board, target) // 4
     #return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
     
-# Finds distance between closest adjacent square to red and target
-# Not yet considering wrapping of board for simplicity    
+# Finds distance between closest adjacent square to red and target   
 def closestSquare(board: dict[Coord, PlayerColor], target: Coord):
     adjacents = findAdjacent(board) 
     # Will fix this later to not use an array, but keeping it here bcuz it's quick and easy
     distances = []
     for square in adjacents:
         distances.append(manhattan(square, target))
+    if not distances: 
+        return 0    
     return math.ceil(min(distances) / 4.0)
 
 
@@ -245,22 +282,22 @@ def closestSquare2(board, target):
         distances.append(manhattan2(square, target))
     return math.ceil(min(distances) / 4.0)
 
-# Checks if target is removed or entire row or column is filled
-def checkTarget(board: dict[Coord, PlayerColor], target: Coord, row: bool):
+
+def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
     # If target is removed
     if not board.get(target):
         return True
-    
+    row = True
+    column = True
     for pos in range(11):
         # If it is empty
-        if row:
-            if not board.get(Coord(target.r, pos)):
-                return False
-        else: 
-            if not board.get(Coord(pos, target.c)):
-                return False        
+        if not board.get(Coord(target.r, pos)):
+            row = False
+        if not board.get(Coord(pos, target.c)):
+            column = False    
+    return column or row
+        
 
-    return True    
 
 
 # Function to find all adjacent spaces to red tokens on board
@@ -280,7 +317,6 @@ def findAdjacent(board: dict[Coord, PlayerColor]):
         for direction in directions: 
             if board.get(coord + direction) and coord + direction not in adjacentSpaces:
                 adjacentSpaces.append(coord + direction)
-
     return adjacentSpaces 
 
 
@@ -303,7 +339,7 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
             foundEmpty = False
 
     foundEmpty = False # reset
-    
+
     # need to combine finding full row and columns so only one nested loop in function
     # find full columns
     for col in range(11):
@@ -333,7 +369,6 @@ def updateBoard(board, actions: PlaceAction):
     newBoard[actions.c1] = newBoard[actions.c2] = PlayerColor.RED
     newBoard[actions.c3] = newBoard[actions.c4] = PlayerColor.RED
     return newBoard 
-
 
 # Returns all possible positions that tetromino can be placed on square. Returns a 2D array. 
 # Can change it to contain PlaceActions later. Keeping it as a 2D array so it's easier to print and debug.
