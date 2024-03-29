@@ -6,16 +6,16 @@ from .utils import render_board
 import heapq
 import math
 
-TARGET = Coord(9, 8)
+TARGET = Coord(0, 0)
 
 # With wrapping included now
 def manhattan(target, square):
     height = abs(target.r - square.r)
     width = abs(target.c - square.c)
-    if abs(target.r - square.r) > 5:
-        height = (target.r - 11) + square.r
+    if height > 5:
+        height = 11 - max(target.r, square.r) + min(target.r, square.r)
     if width > 5:
-        width = (target.c - 11) + square.c
+        width = 11 - max(target.c, square.c) + min(target.c, square.c)
     return math.ceil((width + height) / 4.0) 
 
 # For segments, instead of just considering position
@@ -83,6 +83,7 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
+    # Set target
     TARGET = target
 
     priorityQueue = []
@@ -98,13 +99,16 @@ def search(
     count = 0
     # Implementation of search
     # 
+    generatedCount = 1
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
+        print(render_board(expandedNode[1].board, target, ansi=True))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             #printPlaceAction(expandedNode[1].prevActions)
-            print(count)
+            print("expanded nodes: " + str(count))
+            print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
         if not adjacents:
@@ -114,23 +118,14 @@ def search(
             for tetromino in tetrominoes: 
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
+                        generatedCount += 1
                         newBoard = updateBoard(expandedNode[1].board, item)
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
                         newNode = Node(newBoard, newList)
                         heuristicValue = heuristic(newNode, adjacents, target)
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
-    
-    # This is just for debugging
-    #print(validMove(board, Coord(7, 0), tetrominoes[0]))
-    #for tetromino in tetrominoes:
-       # if validMove(board, Coord(7, 0), tetromino):
-       #     for item in validMove(board, Coord(7, 0), tetromino):
-       #         newBoard = updateBoard(board, item)
-      #          heapq.heappush(priorityQueue, (0, Node(newBoard, [])))
-      #          print(render_board(newBoard, target, ansi=True))
-    #print(len(priorityQueue))
-   
+       
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
     # codes, set the `ansi` flag to True to print a colour-coded version!
@@ -210,7 +205,7 @@ def find_segments(board, target, row: bool):
  # for rows and columns
 def dist_to_segment2(board, target, segment, row):
     distances = []
-    # WIll be a bug here
+
     upperBound = segment[1] 
     lowerBound = segment[0]
     if segment[0] > segment[1]:
@@ -251,7 +246,7 @@ def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
             rowValue += dist_to_segment2(node.board, target, rowSegment, True)
     for colSegment in colSegments:
         if colSegment: 
-            colValue += dist_to_segment2(node.board, target, colSegment, False)
+           colValue += dist_to_segment2(node.board, target, colSegment, False)
     return min(rowValue, colValue) + len(node.prevActions)    
     
     
@@ -263,8 +258,7 @@ def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
     #return closestSquare2(node.board, target) + len(node.prevActions) + numInColFilled(node.board, target) // 4
     #return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
     
-# Finds distance between closest adjacent square to red and target
-# Not yet considering wrapping of board for simplicity    
+# Finds distance between closest adjacent square to red and target   
 def closestSquare(board: dict[Coord, PlayerColor], target: Coord):
     adjacents = findAdjacent(board) 
     # Will fix this later to not use an array, but keeping it here bcuz it's quick and easy
@@ -284,25 +278,6 @@ def closestSquare2(board, target):
     for square in adjacents: 
         distances.append(manhattan2(square, target))
     return math.ceil(min(distances) / 4.0)
-
-# Checks if target is removed or entire row or column is filled
-#def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
-    # If target is removed
- #   if not board.get(target):
-  #      return True
-    
-   # for pos in range(11):
-        # If it is empty
-    #    if not board.get(Coord(target.r, pos)): 
-     #       return False   
-      #  elif not board.get(Coord(pos, target.c)):
-       #     return False
-        #else: 
-         #   continue        
-
-    #return True    
-
-
 
 
 def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
