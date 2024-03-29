@@ -61,7 +61,7 @@ class Node:
     def __lt__(self, other):
         min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
         min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))
-        return math.ceil(min1/4.0) - len(self.prevActions) < math.ceil(min2/4.0) - len(other.prevActions)
+        return min1 < min2
         #return min1*22 + dist(self.board, TARGET) < min2*22 + dist(other.board, TARGET) 
 
 
@@ -250,7 +250,7 @@ def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
         if colSegment: 
            colValue += dist_to_segment2(node.board, target, colSegment, False)
     
-    return min(rowValue, colValue) + len(node.prevActions)    
+    return 1.001*min(rowValue, colValue) + len(node.prevActions)    
     
     
     #segments = find_col_segments(node.board, target)
