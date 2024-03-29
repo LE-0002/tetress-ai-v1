@@ -66,6 +66,28 @@ def findAdjacent(board: dict[Coord, PlayerColor]):
 
     return adjacentSpaces 
 
+def toBeFilled(board, target, row):
+    count = 0
+    for pos in range(11):
+        if row:
+            square = Coord(target.r, pos)
+        else: 
+            square = Coord(pos, target.c)
+        if not board.get(square):
+            count += 1
+    return count  
+
+def updateRowCol(board, target, row):
+    if toBeFilled == 0:
+        for coord, playercolor in board.items: 
+            if row:
+                if coord.r == target.r:
+                    board.pop(coord)
+            if not row:
+                if coord.c == target.c:
+                    board.pop(coord)
+
+
 # Checks if square on board is unoccupied
 # Using this function in findAdjacent so adding it in this branch
 def isEmpty(board: dict[Coord, PlayerColor], square: Coord):
