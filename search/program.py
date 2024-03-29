@@ -106,11 +106,12 @@ def search(
         print(render_board(expandedNode[1].board, target, ansi=True))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
-            #printPlaceAction(expandedNode[1].prevActions)
+            printPlaceAction(expandedNode[1].prevActions)
             print("expanded nodes: " + str(count))
             print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
+        print(heuristic(expandedNode[1], adjacents, target)-len(expandedNode[1].prevActions))
         if not adjacents:
             break
         # Need to fix issue with adjacent squares and tetrominoes loop
@@ -374,5 +375,16 @@ def printAdjacentSquares(values):
         print(coord)
 
 
+# Finds average distance between adjacents to segments
+#def avgDistance(board, target):
+ #   adjacents = findAdjacent(board)
+ #   colSegments = find_segments(board, target, row=False)
+ #   rowSegments = find_segments(board, target, row=True)
+ #   rowValue, colValue = 0, 0
+  #  for adjacent in adjacents:
+   #     for rowSegment in rowSegments: 
+   #         rowValue += manhattan(adjacent, )
+    #        rowValue = dist_to_segment2(board, target, rowSegment, row=True)
 
-# 26 nodes now explored for test case 1, takes less than 3 seconds 
+
+
