@@ -65,6 +65,36 @@ def bfs(board, square, target):
     return counts   
                          
 
+def djikstra(board, square, target):
+    dist = {}
+    visited = {}
+   
+    for i in range(11):
+        for j in range(11):
+            dist[Coord(i, j)] = 1000
+            visited[Coord(i, j)] = 0
+    dist[square] = 0
+    pq = []
+    # initialise the heap
+    for i in range(11):
+        for j in range(11):
+            heapq.heappush(pq, (dist[Coord(i, j)], Coord(i, j)))
+
+    
+    while pq:
+        coord = heapq.heappop(pq)[1]
+        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+        for direction in directions:
+            newSquare = coord + direction
+            if (not board.get(newSquare) or (newSquare.c==target.c and newSquare.r==target.r)) and not visited[newSquare] and dist[coord] + 1 < dist[newSquare]: 
+                dist[newSquare] = dist[coord] + 1
+                heapq.heappush(pq, (dist[newSquare], newSquare))
+                visited[newSquare] = 1
+
+    return dist[target]
+
+
+
 
             
 
@@ -199,8 +229,8 @@ def search(
     count = 0
     # Implementation of search
     # 
-    for key, value in bfs(board, target, Coord(0, 0)).items():
-        print(str(key) + ":" + str(value))
+    #for key, value in bfs(board, target, Coord(0, 0)).items():
+    #    print(str(key) + ":" + str(value))
 
     
     generatedCount = 1
