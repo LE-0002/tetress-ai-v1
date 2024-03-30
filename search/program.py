@@ -321,10 +321,9 @@ def findAdjacent(board: dict[Coord, PlayerColor]):
 
 
 # function that deletes full rows or columns and returns an updated board
-# ROUGH DRAFT function is very tedious, just wanted to get main idea down WILL UPDATE!
+# ROUGH DRAFT function is very tedious
 def updateRowCol(board: dict[Coord, PlayerColor]):
-    tempBoard = board.copy() 
-    foundEmpty = False 
+    foundEmpty = False
     row2Replace = []
     col2Replace = []
     
@@ -340,7 +339,7 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
 
     foundEmpty = False # reset
 
-    # need to combine finding full row and columns so only one nested loop in function
+    # need to somehow combine finding full row and columns so only one nested loop in function
     # find full columns
     for col in range(11):
         for row in range(11):
@@ -351,18 +350,11 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
             col2Replace.append(col)
             foundEmpty = False
 
-    # "delete" full rows
-    for row in row2Replace:
-        for i in range(11):
-            tempBoard.update({Coord(row,i): None})
-
-    # "delete" full columns
-    for col in col2Replace:
-        for i in range(11):
-            tempBoard.update({Coord(i,col): None})
+    # delete full columns and rows in board
+    for coord, playercolor in board.items():
+        if coord.r in row2Replace or coord.c in col2Replace:
+            board.pop(coord)
     
-    return tempBoard
-
 
 def updateBoard(board, actions: PlaceAction):
     newBoard = board.copy()
