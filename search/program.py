@@ -25,6 +25,52 @@ def manhattan2(target, square):
         width = (target.r - 11) + square.c
     return math.ceil((width) / 4.0)              
 
+#def manhattan4(target, square):
+ #   height = abs(target.r - square.r)
+  #  width = abs(target.c - square.c)
+   # if height > 5:
+    #    height = 11 - max(target.r, square.r) + min(target.r, square.r)
+   # if width > 5:
+    #    width = 11 - max(target.c, square.c) + min(target.c, square.c)
+  #  if height > width: 
+
+    # Adds additional distances
+
+
+# Calculates distance based on obstacles
+def bfs(board, square, target):
+    queue = []
+    visited = {}
+    counts = {}
+    for i in range(11):
+        for j in range(11):
+            # 0 represents unvisited
+            visited[Coord(i, j)] = 0
+            counts[Coord(i, j)] = -1
+
+    queue.append(square)
+    counts[square] = 0
+    while queue: 
+        coord = queue.pop(0)
+        # If it is visited
+        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+        # if it hasn't been visited yet
+        if visited[coord]==0:
+            visited[coord]= 1
+            for direction in directions: 
+                # if it is not visited
+                if visited[coord + direction]==0:
+                    counts[coord + direction] = 1 + counts[coord]
+                    queue.append(coord + direction)
+    return counts   
+                         
+
+
+            
+
+    
+
+
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
 # I should use rotation instead
@@ -61,9 +107,62 @@ class Node:
     def __lt__(self, other):
         min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
         min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))
+        
         return min1 < min2
         #return min1*22 + dist(self.board, TARGET) < min2*22 + dist(other.board, TARGET) 
 
+
+# dynamic programming attempt
+def dp(board, target):
+    values = {}
+    for i in range(11):
+        for j in range(11):
+            values[Coord(i, j)] = -1
+
+    for i in range(11):
+        for j in range(11):
+            if i==target.r and j == target.c:
+                values[Coord(i, j)] = 0
+            else:
+                directions = [Direction.Left, Direction.Right, Direction.Down, Direction.Up]
+                values[Coord(i, j)] = 1 + min(values[Coord(i, j) + direction] for direction in directions if values[Coord(i, j) + direction]!=-1 and values)
+    return values                
+
+# Breadth-first search
+#def bfs(board, target, square):
+ #   if target.r==square.r and target.c==square.c:
+  #      return 0    
+    
+ #   directions = [Direction.Left, Direction.Right, Direction.Down, Direction.Up]
+  #  values = []
+  #  for direction in directions: 
+   #     newSquare = square + direction
+        # If new square is empty or is the target square
+   #     if not board.get(newSquare) or (newSquare.r==target.r and newSquare.c==newSquare.c):
+    #        values.append(1 + bfs(board, target, newSquare))
+  #  if values: 
+   #     return min(values)
+  #  else: 
+   #     return -1    
+    
+
+
+
+                
+ #   if board.get(square) and not (square.r == target.r and square.c == target.c):
+  #      return -1
+   ##    return 0        
+   # directions = [Direction.Left, Direction.Right, Direction.Down, Direction.Up]
+   # values = []
+   # for direction in directions:
+    #    if not board.get(square + direction):
+    #        values.append(1 + dp(board, target, square + direction))
+   # print(len(values))        
+   # if values: 
+    #    return min(values)
+   # else: 
+    #    print("cat")
+     #   return -1
 
 def search(
     board: dict[Coord, PlayerColor], 
@@ -100,6 +199,10 @@ def search(
     count = 0
     # Implementation of search
     # 
+    for key, value in bfs(board, target, Coord(0, 0)).items():
+        print(str(key) + ":" + str(value))
+
+    
     generatedCount = 1
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
@@ -417,4 +520,26 @@ def dist(board, target):
    # for adjacent in adjacents: 
     #    if adjacent.r==target.r or adjacent.c==target.c:
      #       return 1
-    #return 0        
+    #return 0
+
+# Counts number of obstacles
+def surrounding(placeaction, board, target):
+    coords = [placeaction.c1, placeaction.c2, placeaction.c3, placeaction.c4]
+    directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+    count = 0
+    for coord in coords: 
+        for direction in directions:
+            newSquare = coord + direction 
+            isInRight = (newSquare.r==target.r) or (newSquare.c==target.c)
+            if board.get(newSquare) and (board.get(newSquare)==PlayerColor.BLUE) and not isInRight:
+                count += 1
+    return count
+
+
+
+
+# checks surrounding squares of the recently placed action piece
+def recent(node, target):
+    return surrounding(node.prevActions[-1], node.board, target)
+
+
