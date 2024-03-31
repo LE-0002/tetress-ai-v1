@@ -173,10 +173,9 @@ def search(
     for pos in range(11):
         distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
         distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))
-    #for key, value in distancesTo[Coord(6, 4)].items():
-     #   print(str(key) + ":" + str(value))
-
-
+    #print((distancesTo[Coord(8, 4)])[Coord(6,3)])
+    #for key, value in distancesTo[Coord(8, 4)].items():
+    #    print(str(key) + ":" + str(value))
     priorityQueue = []
     # To insert into priority queue, 
     # heapq.heappush(priorityQueue, (priority, Node))
@@ -213,7 +212,8 @@ def search(
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
         print(render_board(expandedNode[1].board, target, ansi=True))
-        print(find_segments(board, target, False))
+        print(find_segments(expandedNode[1].board, target, False))
+        print(dist_to_segment2(expandedNode[1].board, target, [8,10], False, distancesTo))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             #printPlaceAction(expandedNode[1].prevActions)
@@ -222,7 +222,26 @@ def search(
             break
         adjacents = findAdjacent(expandedNode[1].board)
 
-        print(heuristic(expandedNode[1], adjacents, target, distancesTo))
+        print(heuristic(expandedNode[1], target, distancesTo))
+        if (heuristic(expandedNode[1], target, distancesTo)==4.0009999999999994):
+            print("map")
+            row = False
+            distances = []
+            segment = [8,10]
+            upperBound = segment[1] 
+            lowerBound = segment[0]
+            if segment[0] > segment[1]:
+                upperBound = segment[1] + 11
+
+            for pos in range(lowerBound, upperBound + 1):
+                if row:
+                    square = Coord(target.r, pos%11)
+                else: 
+                    square = Coord(pos%11, target.c)
+                distances.append(closestSquare(expandedNode[1].board, square, distancesTo))
+            print(distances)    
+            print(math.ceil((min(distances)+1 + upperBound - lowerBound)/4.0))      
+            print("map")
         printAdjacentSquares(adjacents)
         #print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
@@ -238,8 +257,9 @@ def search(
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
                         newNode = Node(newBoard, newList)
-                        heuristicValue = heuristic(newNode, adjacents, target, distancesTo)
+                        heuristicValue = heuristic(newNode, target, distancesTo)
                         print(heuristicValue)
+                        #print(dist_to_segment2(newNode.board, target, [8, 10], False, distancesTo))
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
        
     # The render_board() function is handy for debugging. It will print out a
@@ -263,65 +283,42 @@ def search(
 def find_segments(board, target, row: bool):
     segments = []
     segment = []
-    initialSegment = []
-    for pos in range(11):
+    count = 0
+
+    for pos in range(22):
         if row: 
             square = Coord(target.r, pos%11)
             nextSquare = Coord(target.r, (pos+1)%11)
-            
+            prevSquare = Coord(target.r, (pos-1)%11)
         else:
             square = Coord(pos%11, target.c)
-            nextSquare = Coord((pos+1)%11, target.c)    
-        
-        # if this is the first
-        if not pos:
-            # if empty 
-            if not board.get(square):
-                initialSegment.append(pos)
-            # if next square not empty    
-            elif not board.get(nextSquare):
-                segment.append(pos+1)
-
-         
-        if len(initialSegment)==1 and not board.get(square) and board.get(nextSquare):
-            initialSegment.append(pos)
-        elif pos:
-            # if current square is not empty and next square is empty
-            if board.get(square) and not board.get(nextSquare):
-                segment.append(pos+1)
-            # if current square is empty and next square is not empty
-            elif not board.get(square) and board.get(nextSquare):
-                segment.append(pos)
+            nextSquare = Coord((pos+1)%11, target.c)
+            prevSquare = Coord((pos-1)%11, target.c)
+        if board.get(square):
+            count += 1     
+        # If previous square is filled and current square is not filled
+        if board.get(prevSquare) and (not board.get(square)):
+            segment.append(pos%11)
+        # if current square is not filled and next square is filled
+        if not board.get(square) and board.get(nextSquare) and segment:
+            segment.append(pos%11)
+            if segment not in segments:
                 segments.append(segment)
-                segment = []
-            else:
-                continue
-        else:
-            continue        
-
-    if row: 
-        firstSquare = Coord(target.r, 0)
-        lastSquare = Coord(target.r, 10)
-    else:
-        firstSquare = Coord(0, target.c)
-        lastSquare = Coord(10, target.c) 
-    #if not segment: 
-     #   return [[1, 0]]
-
-    # if first square and last square are both empty 
-    if not board.get(firstSquare) and not board.get(lastSquare):
-        
-        segment.append(initialSegment[1]%11)
-        segments.append(segment)
-    elif initialSegment:
-        segments.append(initialSegment) 
+            segment = []           
+    if count==22:
+        return []   
     
-
-    return segments       
+    if not segments: 
+        return [[1,0]]
+    else: 
+        return segments       
 
 
  # for rows and columns
 def dist_to_segment2(board, target, segment, row, distancesTo):
+    if not segment: 
+        return 0
+    
     distances = []
 
     upperBound = segment[1] 
@@ -335,8 +332,8 @@ def dist_to_segment2(board, target, segment, row, distancesTo):
         else: 
             square = Coord(pos%11, target.c)
         distances.append(closestSquare(board, square, distancesTo))
-    return math.ceil((min(distances)+1)/4.0) + math.ceil((upperBound-lowerBound)/4.0) 
-    #return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0)   
+    result = min(distances) + 1 + upperBound - lowerBound     
+    return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0)   
 
 
 
@@ -356,9 +353,10 @@ def toBeFilled(board, target, row):
      
 
 
-def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord, distancesTo):
+def heuristic(node: Node, target: Coord, distancesTo):
     rowSegments = find_segments(node.board, target, row=True)
     colSegments = find_segments(node.board, target, row=False)
+    adjacentSpaces = findAdjacent(node.board)
     rowValue, colValue = 0, 0
     #rows = []
     #cols = []
@@ -383,7 +381,7 @@ def closestSquare(board: dict[Coord, PlayerColor], target: Coord, distancesTo):
         distances.append((distancesTo[target])[square])
     if not distances: 
         return 0    
-    return math.ceil((min(distances)) / 4.0)
+    return min(distances)
 
 
 
@@ -447,9 +445,6 @@ def validMove(board, square: Coord, tetromino: [Coord]):
         for j in range(4):
             # Checks if block is filled. If filled, sets it to false
             if not isEmpty(board, square - tetromino[i] + tetromino[j]):
-                valid = False
-            # If block is blue, set it to false    
-            elif board.get(square - tetromino[i] + tetromino[j]) == PlayerColor.BLUE:
                 valid = False
             else: 
                 actions.append(square - tetromino[i] + tetromino[j])
