@@ -8,126 +8,61 @@ import math
 
 TARGET = Coord(0, 0)
 
-# With wrapping included now
-def manhattan(target, square):
-    height = abs(target.r - square.r)
-    width = abs(target.c - square.c)
-    if height > 5:
-        height = 11 - max(target.r, square.r) + min(target.r, square.r)
-    if width > 5:
-        width = 11 - max(target.c, square.c) + min(target.c, square.c)
-    return math.ceil((width + height) / 4.0) 
-
-# For segments, instead of just considering position
-def manhattan2(target, square):
-    width = abs(target.c - square.c)
-    if width > 5:
-        width = (target.r - 11) + square.c
-    return math.ceil((width) / 4.0)              
-
-# With wrapping included now
-#def manhattan5(board, target, square):
- #   height = abs(target.r - square.r)
-  #  width = abs(target.c - square.c)
-   # if height > 5:
-    #    height = 11 - max(target.r, square.r) + min(target.r, square.r)
-
-
-  #  if width > 5:
-   #     width = 11 - max(target.c, square.c) + min(target.c, square.c)
-   #     if target.c > square.c:
-    #        (square.c - 1)%11
-  #  else: 
-   #     pos1 = pos2 = target.r
-    #    max(target.c, square.c) - 1)  
-  #  return math.ceil((width + height) / 4.0) 
-
-#def obstacle(board, value, target, isCol):
- #   pos1, pos2 = value, (value+1)%11
-  #  while pos1!=pos2:
-   #     pos2 += 
- #       pos1 += 1
-  #  if isCol:
-   #     while (pos1,)
-
-
-
-
-
-#def manhattan4(target, square):
- #   height = abs(target.r - square.r)
-  #  width = abs(target.c - square.c)
-   # if height > 5:
-    #    height = 11 - max(target.r, square.r) + min(target.r, square.r)
-   # if width > 5:
-    #    width = 11 - max(target.c, square.c) + min(target.c, square.c)
-  #  if height > width: 
-
-    # Adds additional distances
-
-
-# Calculates distance based on obstacles
 def bfs(board, square, target):
     queue = []
-    visited = {}
-    counts = {}
-    for i in range(11):
-        for j in range(11):
-            # 0 represents unvisited
-            visited[Coord(i, j)] = 0
-            counts[Coord(i, j)] = -1
+    defaultV = 0
+    defaultC = -1
+    coordKeys = []
+    for r in range(11):
+        for c in range(11):
+            coordKeys.append(Coord(r, c))
+
+    visited = dict.fromkeys(coordKeys, defaultV)
+    counts = dict.fromkeys(coordKeys, defaultC)
 
     queue.append(square)
     counts[square] = 0
     while queue: 
         coord = queue.pop(0)
-        # If it is visited
+        if coord == target: # stop searching if found target
+            break
+
         directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
         # if it hasn't been visited yet
         if visited[coord]==0:
             visited[coord]= 1
+            # checking adjacent coords
             for direction in directions: 
                 # if it is not visited
                 if visited[coord + direction]==0:
-                    counts[coord + direction] = 1 + counts[coord]
-                    queue.append(coord + direction)
+                    if isEmpty(board, (coord + direction)):
+                        counts[coord + direction] = 1 + counts[coord]
+                        queue.append(coord + direction)
     return counts   
-                         
 
-def djikstra(board, square, target):
-    dist = {}
-    visited = {}
-   
-    for i in range(11):
-        for j in range(11):
-            dist[Coord(i, j)] = 1000
-            visited[Coord(i, j)] = 0
-    dist[square] = 0
-    pq = []
-    # initialise the heap
-    for i in range(11):
-        for j in range(11):
-            heapq.heappush(pq, (dist[Coord(i, j)], Coord(i, j)))
-
-    
-    while pq:
-        coord = heapq.heappop(pq)[1]
-        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
-        for direction in directions:
-            newSquare = coord + direction
-            if (not board.get(newSquare) or (newSquare.c==target.c and newSquare.r==target.r)) and not visited[newSquare] and dist[coord] + 1 < dist[newSquare]: 
-                dist[newSquare] = dist[coord] + 1
-                heapq.heappush(pq, (dist[newSquare], newSquare))
-                visited[newSquare] = 1
-
-    return dist[target]
-
-
-
-
-            
-
-    
+# With wrapping included now
+def manhattan(board, target, square):
+    height = abs(target.r - square.r)
+    width = abs(target.c - square.c)
+    if height > 5:
+        height = 11 - max(target.r, square.r) + min(target.r, square.r)  
+        row = (min(target.r, square.r)-1)%11
+        pos1 = square.c
+        pos2 = (square.c+1)%11
+        while (pos1!=pos2):
+            if board.get(Coord(row, pos1))==PlayerColor.BLUE:
+                pos1 = (pos1-1)%11
+            elif (board.get(Coord(row, pos2))==PlayerColor.BLUE):
+                pos2 = (pos2+1)%11
+            else:
+                break    
+        pos1 = (pos1+1)%11
+        pos2 = (pos2+1)%11
+        if pos1==pos2:
+            additional = 0    
+    if width > 5:
+        width = 11 - max(target.c, square.c) + min(target.c, square.c)
+    return math.ceil((width + height) / 4.0)
 
 
 
@@ -165,68 +100,49 @@ class Node:
     # Fixed - might be able to improve on it
     def __lt__(self, other):
         min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
-        min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))
-        
+        min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))     
         return min1 < min2
-        #return min1*22 + dist(self.board, TARGET) < min2*22 + dist(other.board, TARGET) 
-
-
-# dynamic programming attempt
-def dp(board, target):
-    values = {}
+# Might need modifications
+def djikstra(board, square):
+    dist = {}
+    visited = {}
+   
     for i in range(11):
         for j in range(11):
-            values[Coord(i, j)] = -1
+            dist[Coord(i, j)] = 1000
+            if Coord(i,j) in board.keys():
+                visited[Coord(i,j)]=1
+            else: 
+                visited[Coord(i,j)] = 0    
 
+    dist[square] = 0
+    pq = []
+    # initialise the heap
     for i in range(11):
         for j in range(11):
-            if i==target.r and j == target.c:
-                values[Coord(i, j)] = 0
-            else:
-                directions = [Direction.Left, Direction.Right, Direction.Down, Direction.Up]
-                values[Coord(i, j)] = 1 + min(values[Coord(i, j) + direction] for direction in directions if values[Coord(i, j) + direction]!=-1 and values)
-    return values                
+            heapq.heappush(pq, (dist[Coord(i, j)], Coord(i, j)))
 
-# Breadth-first search
-#def bfs(board, target, square):
- #   if target.r==square.r and target.c==square.c:
-  #      return 0    
     
- #   directions = [Direction.Left, Direction.Right, Direction.Down, Direction.Up]
-  #  values = []
-  #  for direction in directions: 
-   #     newSquare = square + direction
-        # If new square is empty or is the target square
-   #     if not board.get(newSquare) or (newSquare.r==target.r and newSquare.c==newSquare.c):
-    #        values.append(1 + bfs(board, target, newSquare))
-  #  if values: 
-   #     return min(values)
-  #  else: 
-   #     return -1    
-    
-
-
-
+    while pq:
+        coord = heapq.heappop(pq)[1]
+        if not visited[coord]:
+            visited[coord] = 1
+            directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+            for direction in directions:
+                newSquare = coord + direction
+                # If square is empty and coord also empty
+                if ((not board.get(newSquare)) and (not board.get(coord)) and dist[coord] + 1 < dist[newSquare]): 
+                    dist[newSquare] = dist[coord] + 1
+                    heapq.heappush(pq, (dist[newSquare], newSquare))
                 
- #   if board.get(square) and not (square.r == target.r and square.c == target.c):
-  #      return -1
-   ##    return 0        
-   # directions = [Direction.Left, Direction.Right, Direction.Down, Direction.Up]
-   # values = []
-   # for direction in directions:
-    #    if not board.get(square + direction):
-    #        values.append(1 + dp(board, target, square + direction))
-   # print(len(values))        
-   # if values: 
-    #    return min(values)
-   # else: 
-    #    print("cat")
-     #   return -1
+    return dist
+
 
 def search(
     board: dict[Coord, PlayerColor], 
     target: Coord
 ) -> list[PlaceAction] | None:
+    
     """
     This is the entry point for your submission. You should modify this
     function to solve the search problem discussed in the Part A specification.
@@ -242,8 +158,24 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
+    
     # Set target
     TARGET = target
+    coords = []
+    #for i in range(11):
+     #   for j in range(11):
+      #      if Coord(i, j) not in board.keys():
+       #         coords.append(Coord(i, j))
+    #for coord in coords: 
+     #   djikstra(board, coord, target)  
+    print(render_board(board, target, ansi=True))
+    distancesTo = {}
+    for pos in range(11):
+        distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
+        distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))
+    #for key, value in distancesTo[Coord(6, 4)].items():
+     #   print(str(key) + ":" + str(value))
+
 
     priorityQueue = []
     # To insert into priority queue, 
@@ -261,20 +193,37 @@ def search(
     #for key, value in bfs(board, target, Coord(0, 0)).items():
     #    print(str(key) + ":" + str(value))
 
-    
+#    test = {}
+#    for i in range(9):
+#       test[Coord(0, i)] = PlayerColor.BLUE
+#    for j in range(1, 7):
+#       test[Coord(j, 4)] = PlayerColor.RED
+#       if 1<=j<=3:
+#        test[Coord(i, 5)] = PlayerColor.RED 
+#    test[Coord(1, 7)] = PlayerColor.BLUE
+#    list1 = []
+#    for i in range(3):
+#        list1.append(PlaceAction(Coord(0,0), Coord(0, 1), Coord(0, 2), Coord(0, 3)))
+#    render_board(test, Coord(1, 7), ansi=True)
+#    adjacents1 = findAdjacent(test)
+#    print(heuristic(Node(test, list1), adjacents1, target, distancesTo))   
+       
     generatedCount = 1
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
         print(render_board(expandedNode[1].board, target, ansi=True))
+        print(find_segments(board, target, False))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
-            printPlaceAction(expandedNode[1].prevActions)
-            print("expanded nodes: " + str(count))
-            print("generated nodes: " + str(generatedCount))
+            #printPlaceAction(expandedNode[1].prevActions)
+            #print("expanded nodes: " + str(count))
+            #print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
-        #print(heuristic(expandedNode[1], adjacents, target))
+
+        print(heuristic(expandedNode[1], adjacents, target, distancesTo))
+        printAdjacentSquares(adjacents)
         #print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
             break
@@ -285,12 +234,12 @@ def search(
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
                         generatedCount += 1
-
                         newBoard = updateBoard(expandedNode[1].board, item)
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
                         newNode = Node(newBoard, newList)
-                        heuristicValue = heuristic(newNode, adjacents, target)
+                        heuristicValue = heuristic(newNode, adjacents, target, distancesTo)
+                        print(heuristicValue)
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
        
     # The render_board() function is handy for debugging. It will print out a
@@ -307,11 +256,7 @@ def search(
     # output format. Of course, you should instead return the result of your
     # search algorithm. Remember: if no solution is possible for a given input,
     # return `None` instead of a list.
-    return [
-        PlaceAction(Coord(2, 5), Coord(2, 6), Coord(3, 6), Coord(3, 7)),
-        PlaceAction(Coord(1, 8), Coord(2, 8), Coord(3, 8), Coord(4, 8)),
-        PlaceAction(Coord(5, 8), Coord(6, 8), Coord(7, 8), Coord(8, 8)),
-    ]
+    return expandedNode[1].prevActions
 
 
 # This function is very buggy
@@ -329,9 +274,11 @@ def find_segments(board, target, row: bool):
             nextSquare = Coord((pos+1)%11, target.c)    
         
         # if this is the first
-        if not pos: 
+        if not pos:
+            # if empty 
             if not board.get(square):
                 initialSegment.append(pos)
+            # if next square not empty    
             elif not board.get(nextSquare):
                 segment.append(pos+1)
 
@@ -358,9 +305,13 @@ def find_segments(board, target, row: bool):
     else:
         firstSquare = Coord(0, target.c)
         lastSquare = Coord(10, target.c) 
+    #if not segment: 
+     #   return [[1, 0]]
+
     # if first square and last square are both empty 
     if not board.get(firstSquare) and not board.get(lastSquare):
-        segment.append(initialSegment[1])
+        
+        segment.append(initialSegment[1]%11)
         segments.append(segment)
     elif initialSegment:
         segments.append(initialSegment) 
@@ -370,7 +321,7 @@ def find_segments(board, target, row: bool):
 
 
  # for rows and columns
-def dist_to_segment2(board, target, segment, row):
+def dist_to_segment2(board, target, segment, row, distancesTo):
     distances = []
 
     upperBound = segment[1] 
@@ -383,8 +334,10 @@ def dist_to_segment2(board, target, segment, row):
             square = Coord(target.r, pos%11)
         else: 
             square = Coord(pos%11, target.c)
-        distances.append(closestSquare(board, square))
-    return math.ceil((min(distances) + upperBound - lowerBound+1)/4.0) 
+        distances.append(closestSquare(board, square, distancesTo))
+    return math.ceil((min(distances)+1)/4.0) + math.ceil((upperBound-lowerBound)/4.0) 
+    #return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0)   
+
 
 
 
@@ -403,48 +356,35 @@ def toBeFilled(board, target, row):
      
 
 
-def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord):
+def heuristic(node: Node, adjacentSpaces: [Coord], target: Coord, distancesTo):
     rowSegments = find_segments(node.board, target, row=True)
     colSegments = find_segments(node.board, target, row=False)
     rowValue, colValue = 0, 0
+    #rows = []
+    #cols = []
     for rowSegment in rowSegments:
         if rowSegment:
-            rowValue += dist_to_segment2(node.board, target, rowSegment, True)
+            rowValue += dist_to_segment2(node.board, target, rowSegment, True, distancesTo)
+            #rows.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))
     for colSegment in colSegments:
         if colSegment: 
-           colValue += dist_to_segment2(node.board, target, colSegment, False)
-    
+            colValue += dist_to_segment2(node.board, target, colSegment, False, distancesTo)
+            #cols.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))
+    #print(rows, cols)       
     return 1.001*min(rowValue, colValue) + len(node.prevActions)    
     
     
-    #segments = find_col_segments(node.board, target)
-    #value = 0
-    #for segment in segments:
-    #    value += dist_to_segment(node.board, target, segment)
-    #return value + len(node.prevActions)
-    #return closestSquare2(node.board, target) + len(node.prevActions) + numInColFilled(node.board, target) // 4
-    #return closestSquare(node.board, target) + len(node.prevActions) #+ numInColFilled(node.board, target) #1128
-    
 # Finds distance between closest adjacent square to red and target   
-def closestSquare(board: dict[Coord, PlayerColor], target: Coord):
+def closestSquare(board: dict[Coord, PlayerColor], target: Coord, distancesTo):
     adjacents = findAdjacent(board) 
     # Will fix this later to not use an array, but keeping it here bcuz it's quick and easy
     distances = []
     for square in adjacents:
-        distances.append(manhattan(square, target))
+        distances.append((distancesTo[target])[square])
     if not distances: 
         return 0    
-    return math.ceil(min(distances) / 4.0)
+    return math.ceil((min(distances)) / 4.0)
 
-
-## different version
-## more efficient, currently only for column
-def closestSquare2(board, target):
-    adjacents = findAdjacent(board)
-    distances = []
-    for square in adjacents: 
-        distances.append(manhattan2(square, target))
-    return math.ceil(min(distances) / 4.0)
 
 
 def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
@@ -538,69 +478,4 @@ def printPlaceAction(items: [PlaceAction]):
 # For debugging
 def printAdjacentSquares(values):
     for coord in values:
-        print(coord)
-
-
-#Finds average distance between adjacents to segments
-#def avgDistance(board, target):
- #   adjacents = findAdjacent(board)
-  #  colSegments = find_segments(board, target, row=False)
-    #rowSegments = find_segments(board, target, row=True)
-   # rowValue, colValue = 0, 0
-   # for adjacent in adjacents:
-    #    for colSegment in colSegments: 
-     #       colValue += manhattan3(adjacent, colSegment, target)
-            #rowValue = dist_to_segment2(board, target, rowSegment, row=True)
-   # return colValue / float(len(adjacents))       
-
-
-# helper function for column only so far
-#def manhattan3(adjacent, segment, target):
- #   pos = segment[0]
-  #  distances = []
-   # while (pos%11 != (segment[1] + 1)%11):
-    #    distances.append(manhattan(Coord(pos%11, target.c), adjacent))
-     #   pos += 1
-    #return min(distances)
-
-# Find all red squares and takes average distance to get to target row or column
-def dist(board, target):
-    dist = 0
-    redSquares = 0
-    for coord, playercolor in board.items():
-        if board.get(coord) and board.get(coord)==PlayerColor.RED:
-            redSquares += 1
-            dist += min(manhattan(coord, Coord(target.r, coord.c)), manhattan(coord, Coord(coord.r, target.c)))
-    return dist / float(redSquares)       
-
-
-#def onRed(board, target):
- #   adjacents = findAdjacent(board)  
-  #  if not adjacents:
-   #     return 0        
-   # for adjacent in adjacents: 
-    #    if adjacent.r==target.r or adjacent.c==target.c:
-     #       return 1
-    #return 0
-
-# Counts number of obstacles
-def surrounding(placeaction, board, target):
-    coords = [placeaction.c1, placeaction.c2, placeaction.c3, placeaction.c4]
-    directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
-    count = 0
-    for coord in coords: 
-        for direction in directions:
-            newSquare = coord + direction 
-            isInRight = (newSquare.r==target.r) or (newSquare.c==target.c)
-            if board.get(newSquare) and (board.get(newSquare)==PlayerColor.BLUE) and not isInRight:
-                count += 1
-    return count
-
-
-
-
-# checks surrounding squares of the recently placed action piece
-def recent(node, target):
-    return surrounding(node.prevActions[-1], node.board, target)
-
-
+        print(coord, end=",")
