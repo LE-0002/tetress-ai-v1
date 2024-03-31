@@ -138,6 +138,39 @@ def djikstra(board, square):
     return dist
 
 
+# function that deletes full rows or columns and returns an updated board
+def updateRowCol(board: dict[Coord, PlayerColor]):
+    row2Replace = []
+    col2Replace = []
+    
+    #find full rows
+    for row in range(11):
+        foundEmpty = True
+        for col in range(11):
+            # If it is empty
+            if not board.get(Coord(row, col)): 
+                foundEmpty = False
+        if foundEmpty:
+            row2Replace.append(row)
+    
+    #find full columns
+    for col in range(11):
+        foundEmpty = True
+        for row in range(11):
+            # If it is empty
+            if not board.get(Coord(row, col)): 
+                foundEmpty = False
+        if foundEmpty:
+            col2Replace.append(row)
+    
+    for row in range(11):
+        for col in range(11):
+            if row in row2Replace or col in col2Replace:
+                board.pop(Coord(row, col))
+    
+    
+
+
 def search(
     board: dict[Coord, PlayerColor], 
     target: Coord
@@ -168,7 +201,7 @@ def search(
        #         coords.append(Coord(i, j))
     #for coord in coords: 
      #   djikstra(board, coord, target)  
-    print(render_board(board, target, ansi=True))
+    #print(render_board(board, target, ansi=True))
     distancesTo = {}
     for pos in range(11):
         distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
@@ -211,9 +244,9 @@ def search(
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        print(render_board(expandedNode[1].board, target, ansi=True))
-        print(find_segments(expandedNode[1].board, target, False))
-        print(dist_to_segment2(expandedNode[1].board, target, [8,10], False, distancesTo))
+        #print(render_board(expandedNode[1].board, target, ansi=True))
+        #print(find_segments(expandedNode[1].board, target, False))
+        #print(dist_to_segment2(expandedNode[1].board, target, [8,10], False, distancesTo))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             #printPlaceAction(expandedNode[1].prevActions)
@@ -222,27 +255,27 @@ def search(
             break
         adjacents = findAdjacent(expandedNode[1].board)
 
-        print(heuristic(expandedNode[1], target, distancesTo))
-        if (heuristic(expandedNode[1], target, distancesTo)==4.0009999999999994):
-            print("map")
-            row = False
-            distances = []
-            segment = [8,10]
-            upperBound = segment[1] 
-            lowerBound = segment[0]
-            if segment[0] > segment[1]:
-                upperBound = segment[1] + 11
+        #print(heuristic(expandedNode[1], target, distancesTo))
+        #if (heuristic(expandedNode[1], target, distancesTo)==4.0009999999999994):
+         #   print("map")
+#          #  row = False
+#            distances = []
+#            segment = [8,10]
+#            upperBound = segment[1] 
+#            lowerBound = segment[0]
+#            if segment[0] > segment[1]:
+#                upperBound = segment[1] + 11
 
-            for pos in range(lowerBound, upperBound + 1):
-                if row:
-                    square = Coord(target.r, pos%11)
-                else: 
-                    square = Coord(pos%11, target.c)
-                distances.append(closestSquare(expandedNode[1].board, square, distancesTo))
-            print(distances)    
-            print(math.ceil((min(distances)+1 + upperBound - lowerBound)/4.0))      
-            print("map")
-        printAdjacentSquares(adjacents)
+#            for pos in range(lowerBound, upperBound + 1):
+#                if row:
+#                    square = Coord(target.r, pos%11)
+#                else: 
+#                    square = Coord(pos%11, target.c)
+#                distances.append(closestSquare(expandedNode[1].board, square, distancesTo))
+#            print(distances)    
+#            print(math.ceil((min(distances)+1 + upperBound - lowerBound)/4.0))      
+#            print("map")
+#        printAdjacentSquares(adjacents)
         #print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
             break
@@ -258,7 +291,7 @@ def search(
                         newList.append(item)
                         newNode = Node(newBoard, newList)
                         heuristicValue = heuristic(newNode, target, distancesTo)
-                        print(heuristicValue)
+                        #print(heuristicValue)
                         #print(dist_to_segment2(newNode.board, target, [8, 10], False, distancesTo))
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
        
@@ -354,6 +387,10 @@ def toBeFilled(board, target, row):
 
 
 def heuristic(node: Node, target: Coord, distancesTo):
+    # If target is gone
+    if not (node.board).get(target):
+        return len(node.prevActions)
+    
     rowSegments = find_segments(node.board, target, row=True)
     colSegments = find_segments(node.board, target, row=False)
     adjacentSpaces = findAdjacent(node.board)
@@ -427,6 +464,7 @@ def updateBoard(board, actions: PlaceAction):
     newBoard = board.copy()
     newBoard[actions.c1] = newBoard[actions.c2] = PlayerColor.RED
     newBoard[actions.c3] = newBoard[actions.c4] = PlayerColor.RED
+    updateRowCol(board)
     return newBoard 
 
 # Returns all possible positions that tetromino can be placed on square. Returns a 2D array. 
