@@ -309,7 +309,11 @@ def search(
     # output format. Of course, you should instead return the result of your
     # search algorithm. Remember: if no solution is possible for a given input,
     # return `None` instead of a list.
-    return expandedNode[1].prevActions
+
+    if checkTarget(expandedNode[1].board, target):
+        return expandedNode[1].prevActions
+    else:
+        return None    
 
 
 # This function is very buggy
