@@ -25,6 +25,35 @@ def manhattan2(target, square):
         width = (target.r - 11) + square.c
     return math.ceil((width) / 4.0)              
 
+# With wrapping included now
+#def manhattan5(board, target, square):
+ #   height = abs(target.r - square.r)
+  #  width = abs(target.c - square.c)
+   # if height > 5:
+    #    height = 11 - max(target.r, square.r) + min(target.r, square.r)
+
+
+  #  if width > 5:
+   #     width = 11 - max(target.c, square.c) + min(target.c, square.c)
+   #     if target.c > square.c:
+    #        (square.c - 1)%11
+  #  else: 
+   #     pos1 = pos2 = target.r
+    #    max(target.c, square.c) - 1)  
+  #  return math.ceil((width + height) / 4.0) 
+
+#def obstacle(board, value, target, isCol):
+ #   pos1, pos2 = value, (value+1)%11
+  #  while pos1!=pos2:
+   #     pos2 += 
+ #       pos1 += 1
+  #  if isCol:
+   #     while (pos1,)
+
+
+
+
+
 #def manhattan4(target, square):
  #   height = abs(target.r - square.r)
   #  width = abs(target.c - square.c)
@@ -249,12 +278,14 @@ def search(
         #print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
             break
+            
         # Need to fix issue with adjacent squares and tetrominoes loop
         for adjacent in adjacents:
             for tetromino in tetrominoes: 
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
                         generatedCount += 1
+
                         newBoard = updateBoard(expandedNode[1].board, item)
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
