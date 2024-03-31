@@ -22,7 +22,39 @@ def manhattan2(target, square):
     width = abs(target.c - square.c)
     if width > 5:
         width = (target.r - 11) + square.c
-    return math.ceil((width) / 4.0)              
+    return math.ceil((width) / 4.0)  
+
+
+# Calculates distance based on obstacles
+# guaranteed to have a bug 
+def bfs(board, square, target):
+    queue = []
+    defaultV = 0
+    defaultC = -1
+    coordKeys = [Coord(r,c) for r in range(11) for c in range(11)] #not sure if this works
+
+    visited = dict.fromkeys(coordKeys, defaultV)
+    counts = dict.fromkeys(coordKeys, defaultC)
+
+    queue.append(square)
+    counts[square] = 0
+    while queue: 
+        coord = queue.pop(0)
+        if coord == target: # stop searching if found target
+            break
+
+        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+        # if it hasn't been visited yet
+        if visited[coord]==0:
+            visited[coord]= 1
+            # checking adjacent coords
+            for direction in directions: 
+                # if it is not visited
+                if visited[coord + direction]==0:
+                    if isEmpty(board, (coord + direction)):
+                        counts[coord + direction] = 1 + counts[coord]
+                        queue.append(coord + direction)
+    return counts   
 
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
