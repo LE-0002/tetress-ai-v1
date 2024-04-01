@@ -279,6 +279,10 @@ def search(
             
             
         #return None
+    for i in range(10000):
+        bigNode = Node(board, [])
+        heapq.heappush(priorityQueue, (10000, bigNode))
+
     print("moo")       
     generatedCount = 1
     while priorityQueue:
@@ -334,7 +338,6 @@ def search(
                         newList.append(item)
                         newNode = Node(newBoard, newList)
                         heuristicValue = heuristic(newNode, target, distancesTo)
-                        #print(heuristicValue)
                         #print(dist_to_segment2(newNode.board, target, [8, 10], False, distancesTo))
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
        
@@ -516,7 +519,7 @@ def updateBoard(board, actions: PlaceAction):
     newBoard = board.copy()
     newBoard[actions.c1] = newBoard[actions.c2] = PlayerColor.RED
     newBoard[actions.c3] = newBoard[actions.c4] = PlayerColor.RED
-    updateRowCol(board)
+    updateRowCol(newBoard)
     return newBoard 
 
 # Returns all possible positions that tetromino can be placed on square. Returns a 2D array. 
