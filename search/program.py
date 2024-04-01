@@ -26,7 +26,7 @@ def manhattan2(target, square):
 
 
 # Calculates distance based on obstacles, returns shortest path 
-# guaranteed to have a bug 
+# I think there is still an error because some nodes are being marked as distance 4 but should be distance 5 (can't move through obstacles or diagonally)
 def bfs(board, square, target):
     queue = []
     defaultV = 0
@@ -52,8 +52,7 @@ def bfs(board, square, target):
                 # if it is not visited
                 if visited[coord + direction]==0:
                     counts[coord + direction] = 1 + counts[coord]
-                    current = coord + direction
-                    if isEmpty(board, coord+direction):
+                    if isEmpty(board, coord+direction): # only check out spaces that are empty
                         queue.append(coord + direction)
         #print("current: ")
         #printBFS(counts[coord+direction])
