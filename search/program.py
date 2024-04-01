@@ -25,7 +25,7 @@ def manhattan2(target, square):
     return math.ceil((width) / 4.0)  
 
 
-# Calculates distance based on obstacles
+# Calculates distance based on obstacles, returns shortest path 
 # guaranteed to have a bug 
 def bfs(board, square, target):
     queue = []
@@ -41,8 +41,8 @@ def bfs(board, square, target):
     while queue: 
         coord = queue.pop(0)
         if coord == target: # stop searching if found target
-            break
-
+            return counts
+        #printBFS(coord)
         directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
         # if it hasn't been visited yet
         if visited[coord]==0:
@@ -51,11 +51,13 @@ def bfs(board, square, target):
             for direction in directions: 
                 # if it is not visited
                 if visited[coord + direction]==0:
-                    if isEmpty(board, (coord + direction)):
-                        counts[coord + direction] = 1 + counts[coord]
+                    counts[coord + direction] = 1 + counts[coord]
+                    current = coord + direction
+                    if isEmpty(board, coord+direction):
                         queue.append(coord + direction)
+        #print("current: ")
+        #printBFS(counts[coord+direction])
     return counts   
-
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
 # I should use rotation instead
@@ -124,6 +126,8 @@ def search(
     # heapq.heappush(priorityQueue, (priority, Node))
     # To remove, heapq.heappop(priorityQueue)[1]
 
+    bfs(board, Coord(2,5), target)
+
     # Create starting node
     initialNode = Node(board, [])
     heapq.heappush(priorityQueue, (0, initialNode)) 
@@ -136,16 +140,16 @@ def search(
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        print(render_board(expandedNode[1].board, target, ansi=True))
+        print(render_board(expandedNode[1].board, target, ansi=False))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
-            #print(render_board(expandedNode[1].board, target, ansi=True))
+            print(render_board(expandedNode[1].board, target, ansi=True))
             printPlaceAction(expandedNode[1].prevActions)
             print("expanded nodes: " + str(count))
             print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
-        #print(heuristic(expandedNode[1], adjacents, target))
-        #print(toBeFilled(expandedNode[1].board, target, False))
+        print(heuristic(expandedNode[1], adjacents, target))
+        print(toBeFilled(expandedNode[1].board, target, False))
         if not adjacents:
             break
         # Need to fix issue with adjacent squares and tetrominoes loop
@@ -164,7 +168,8 @@ def search(
     # The render_board() function is handy for debugging. It will print out a
     # board state in a human-readable format. If your terminal supports ANSI
     # codes, set the `ansi` flag to True to print a colour-coded version!
-    #print(render_board(board, target, ansi=True))
+
+    print(render_board(board, target, ansi=False))
 
     # Do some impressive AI stuff here to find the solution...
     # ...
@@ -441,5 +446,13 @@ def printPlaceAction(items: [PlaceAction]):
 def printAdjacentSquares(values):
     for coord in values:
         print(coord)
+
+# for debugging
+def printBFS(square):
+    print(square)
+
+# more debugging
+def printDict(board):
+    print(board)
 
 # 26 nodes now explored for test case 1, takes less than 3 seconds 
