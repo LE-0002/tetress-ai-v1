@@ -250,35 +250,35 @@ def search(
 #    print(heuristic(Node(test, list1), adjacents1, target, distancesTo)) 
     
     # Can loop through every blue node not in target row or column and do it
-    if (heuristic(initialNode, target, distancesTo) > 250):
-        print("dog")
-        if target not in visited1 and firstTarget==1:
-            print("meow")
-            visited1.append(target)
-            previousActions = []
-            lenpreviousActions = 250
-            actions = []
-            print(TARGET1)
-            print(blueSquares(initialNode.board, TARGET1, visited1))
-            for blueSquare in blueSquares(initialNode.board, TARGET1, visited1):
-                print("pad")
-                print(visited1)
-                print(blueSquare)
-                if blueSquare not in visited1:
-                    print("boo")
-                    actions = search(initialNode.board, blueSquare)
-                    print("asdfasd")
-                if actions and len(actions) < lenpreviousActions:
-                    print("bad")
-                    lenpreviousActions = len(actions)
-                    previousActions = actions
-            print("doo")        
-            new = newBoard2(initialNode.board, previousActions)
-            if search(new, target):
-                return previousActions + search(new, target)
+#    if (heuristic(initialNode, target, distancesTo) > 250):
+#        print("dog")
+#        if target not in visited1 and firstTarget==1:
+#            print("meow")
+#            visited1.append(target)
+#            previousActions = []
+#            lenpreviousActions = 250
+#            actions = []
+#            print(TARGET1)
+#            print(blueSquares(initialNode.board, TARGET1, visited1))
+#            for blueSquare in blueSquares(initialNode.board, TARGET1, visited1):
+#                print("pad")
+#                print(visited1)
+#                print(blueSquare)
+#                if blueSquare not in visited1:
+#                    print("boo")
+#                    actions = search(initialNode.board, blueSquare)
+#                    print("asdfasd")
+#                if actions and len(actions) < lenpreviousActions:
+#                    print("bad")
+#                    lenpreviousActions = len(actions)
+#                    previousActions = actions
+#            print("doo")        
+           # new = newBoard2(initialNode.board, previousActions)
+          #  if search(new, target):
+         #       return previousActions + search(new, target)
             
             
-        return None
+        #return None
     print("moo")       
     generatedCount = 1
     while priorityQueue:
@@ -438,23 +438,28 @@ def heuristic(node: Node, target: Coord, distancesTo):
     if not (node.board).get(target):
         return len(node.prevActions)
     
-    rowSegments = find_segments(node.board, target, row=True)
-    colSegments = find_segments(node.board, target, row=False)
-    adjacentSpaces = findAdjacent(node.board)
-    rowValue, colValue = 0, 0
-    #rows = []
-    #cols = []
-    for rowSegment in rowSegments:
-        if rowSegment:
-            rowValue += dist_to_segment2(node.board, target, rowSegment, True, distancesTo)
-            #rows.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))
-    for colSegment in colSegments:
-        if colSegment: 
-            colValue += dist_to_segment2(node.board, target, colSegment, False, distancesTo)
-            #cols.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))
-    #print(rows, cols)       
+    rowValue = estimate_move(node, target, distancesTo, True)
+    colValue = estimate_move(node, target, distancesTo, False)
+      
     return 1.001*min(rowValue, colValue) + len(node.prevActions)    
-    
+
+def estimate_move(node: Node, target: Coord, distancesTo, isRow):
+    # If target is gone
+    if not (node.board).get(target):
+        return len(node.prevActions)
+    value = 0      
+    if isRow: 
+        rowSegments = find_segments(node.board, target, row=True)
+        for rowSegment in rowSegments:
+            if rowSegment:
+                value += dist_to_segment2(node.board, target, rowSegment, True, distancesTo)
+                #rows.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))       
+    else:
+        colSegments = find_segments(node.board, target, row=False)
+        for colSegment in colSegments:
+            if colSegment: 
+                value += dist_to_segment2(node.board, target, colSegment, False, distancesTo)
+    return value            
     
 # Finds distance between closest adjacent square to red and target   
 def closestSquare(board: dict[Coord, PlayerColor], target: Coord, distancesTo):
