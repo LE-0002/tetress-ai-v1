@@ -8,6 +8,11 @@ import math
 
 TARGET = Coord(0, 0)
 
+visited1 = []
+firstTarget = 0
+TARGET1 = Coord(0,0)
+firstBoard = {}
+
 def bfs(board, square, target):
     queue = []
     defaultV = 0
@@ -161,15 +166,15 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
             if not board.get(Coord(row, col)): 
                 foundEmpty = False
         if foundEmpty:
-            col2Replace.append(row)
+            col2Replace.append(col)
     
     for row in range(11):
         for col in range(11):
             if row in row2Replace or col in col2Replace:
                 board.pop(Coord(row, col))
+               
     
     
-
 
 def search(
     board: dict[Coord, PlayerColor], 
@@ -194,7 +199,11 @@ def search(
     
     # Set target
     TARGET = target
+    print(TARGET)
     coords = []
+    global firstTarget  
+    firstTarget += 1
+
     #for i in range(11):
      #   for j in range(11):
       #      if Coord(i, j) not in board.keys():
@@ -238,24 +247,58 @@ def search(
 #        list1.append(PlaceAction(Coord(0,0), Coord(0, 1), Coord(0, 2), Coord(0, 3)))
 #    render_board(test, Coord(1, 7), ansi=True)
 #    adjacents1 = findAdjacent(test)
-#    print(heuristic(Node(test, list1), adjacents1, target, distancesTo))   
-       
+#    print(heuristic(Node(test, list1), adjacents1, target, distancesTo)) 
+    
+    # Can loop through every blue node not in target row or column and do it
+    if (heuristic(initialNode, target, distancesTo) > 250):
+        print("dog")
+        if target not in visited1 and firstTarget==1:
+            print("meow")
+            visited1.append(target)
+            previousActions = []
+            lenpreviousActions = 250
+            actions = []
+            print(TARGET1)
+            print(blueSquares(initialNode.board, TARGET1, visited1))
+            for blueSquare in blueSquares(initialNode.board, TARGET1, visited1):
+                print("pad")
+                print(visited1)
+                print(blueSquare)
+                if blueSquare not in visited1:
+                    print("boo")
+                    actions = search(initialNode.board, blueSquare)
+                    print("asdfasd")
+                if actions and len(actions) < lenpreviousActions:
+                    print("bad")
+                    lenpreviousActions = len(actions)
+                    previousActions = actions
+            print("doo")        
+            new = newBoard2(initialNode.board, previousActions)
+            if search(new, target):
+                return previousActions + search(new, target)
+            
+            
+        return None
+    print("moo")       
     generatedCount = 1
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
         count += 1
-        #print(render_board(expandedNode[1].board, target, ansi=True))
+        print(render_board(expandedNode[1].board, target, ansi=True))
         #print(find_segments(expandedNode[1].board, target, False))
         #print(dist_to_segment2(expandedNode[1].board, target, [8,10], False, distancesTo))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
             #print(render_board(expandedNode[1].board, target, ansi=True))
             #printPlaceAction(expandedNode[1].prevActions)
-            #print("expanded nodes: " + str(count))
-            #print("generated nodes: " + str(generatedCount))
+            print("expanded nodes: " + str(count))
+            print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
 
-        #print(heuristic(expandedNode[1], target, distancesTo))
+        print(heuristic(expandedNode[1], target, distancesTo))
+        # Need to fix this
+            
+        print("cat")        
         #if (heuristic(expandedNode[1], target, distancesTo)==4.0009999999999994):
          #   print("map")
 #          #  row = False
@@ -516,3 +559,18 @@ def printPlaceAction(items: [PlaceAction]):
 def printAdjacentSquares(values):
     for coord in values:
         print(coord, end=",")
+
+# Given a board and placeactions, returns the updated board
+def newBoard2(board, placeactions: [PlaceAction]):
+    new = board
+    for action in placeactions: 
+        new = updateBoard(new, action)
+        updateRowCol(new)
+    return new    
+
+def blueSquares(board, target, visited1):
+    blueSquares = []
+    for key, colour in board.items():
+        if colour==PlayerColor.BLUE and not (key.c==target.c or key.r==target.r) and key not in visited1:
+            blueSquares.append(key)
+    return blueSquares        
