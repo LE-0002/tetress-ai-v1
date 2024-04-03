@@ -149,7 +149,8 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
                 board.pop(Coord(row, col))
                
     
-    
+times = 0
+current = 0    
 
 def search(
     board: dict[Coord, PlayerColor], 
@@ -179,16 +180,8 @@ def search(
     TARGET = target
     print(TARGET)
     coords = []
-    global firstTarget  
-    firstTarget += 1
 
-    #for i in range(11):
-     #   for j in range(11):
-      #      if Coord(i, j) not in board.keys():
-       #         coords.append(Coord(i, j))
-    #for coord in coords: 
-     #   djikstra(board, coord, target)  
-    #print(render_board(board, target, ansi=True))
+
     distancesTo = {}
     for pos in range(11):
         distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
@@ -206,7 +199,6 @@ def search(
         min = 1000
         sequence = []
         for square in removableList:
-            canRemove = False
             print("Mannnnnnnnnnnnnnnnnn")
             print(min)
             print(square)
@@ -215,14 +207,21 @@ def search(
             for action in actions: 
                 newBoard2 = updateBoard(newBoard2, action)  
             numMoves = remaining_moves(newBoard2, target) 
+            current += numMoves + len(actions)
             print("numMoves" + str(numMoves))  
             # If predicted next moves are less than current minimum
-            if numMoves < min:
+            if current < min:
                 newActions = actions + search(newBoard2, target)
-                canRemove = True
-            if len(newActions) < min and canRemove: 
-                min = len(newActions)
-                sequence = newActions
+                if len(newActions) < min: 
+                    min = len(newActions)
+                    sequence = newActions
+        print("*********************")
+        board5 = board.copy()
+        print(render_board(board, ansi=True))
+        for action in sequence: 
+            board5 = updateBoard(board5, action)
+            print(render_board(updateBoard(board5, action), ansi=True))
+        
         return sequence        
     
     
