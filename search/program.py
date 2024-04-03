@@ -45,31 +45,6 @@ def bfs(board, square, target):
                         queue.append(coord + direction)
     return counts   
 
-# With wrapping included now
-def manhattan(board, target, square):
-    height = abs(target.r - square.r)
-    width = abs(target.c - square.c)
-    if height > 5:
-        height = 11 - max(target.r, square.r) + min(target.r, square.r)  
-        row = (min(target.r, square.r)-1)%11
-        pos1 = square.c
-        pos2 = (square.c+1)%11
-        while (pos1!=pos2):
-            if board.get(Coord(row, pos1))==PlayerColor.BLUE:
-                pos1 = (pos1-1)%11
-            elif (board.get(Coord(row, pos2))==PlayerColor.BLUE):
-                pos2 = (pos2+1)%11
-            else:
-                break    
-        pos1 = (pos1+1)%11
-        pos2 = (pos2+1)%11
-        if pos1==pos2:
-            additional = 0    
-    if width > 5:
-        width = 11 - max(target.c, square.c) + min(target.c, square.c)
-    return math.ceil((width + height) / 4.0)
-
-
 
 # Hardcoded the tetrominoes - not sure if this is best practice or whether
 # I should use rotation instead
@@ -215,6 +190,22 @@ def search(
     for pos in range(11):
         distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
         distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))
+    
+    blueSquares = findBlueSquares(board)
+    notPossible = True
+    distance2 = {}
+    for blueSquare in blueSquares:
+        for pos in range(11):
+            distance2[Coord(blueSquare.r, pos)] = djikstra(board, Coord(blueSquare.r, pos))
+            distance2[Coord(pos, blueSquare.c)] = djikstra(board, Coord(pos, blueSquare.c))
+        if remaining_moves(board, blueSquare, distance2) < 250:
+            notPossible = False
+    if notPossible:
+        return None        
+
+
+    
+    
     #print((distancesTo[Coord(8, 4)])[Coord(6,3)])
     #for key, value in distancesTo[Coord(8, 4)].items():
     #    print(str(key) + ":" + str(value))
@@ -227,63 +218,10 @@ def search(
     initialNode = Node(board, [])
     heapq.heappush(priorityQueue, (0, initialNode)) 
 
-    # Will clean up this code, just want to get something working first
     count = 0
     # Implementation of search
-    # 
-    #for key, value in bfs(board, target, Coord(0, 0)).items():
-    #    print(str(key) + ":" + str(value))
-
-#    test = {}
-#    for i in range(9):
-#       test[Coord(0, i)] = PlayerColor.BLUE
-#    for j in range(1, 7):
-#       test[Coord(j, 4)] = PlayerColor.RED
-#       if 1<=j<=3:
-#        test[Coord(i, 5)] = PlayerColor.RED 
-#    test[Coord(1, 7)] = PlayerColor.BLUE
-#    list1 = []
-#    for i in range(3):
-#        list1.append(PlaceAction(Coord(0,0), Coord(0, 1), Coord(0, 2), Coord(0, 3)))
-#    render_board(test, Coord(1, 7), ansi=True)
-#    adjacents1 = findAdjacent(test)
-#    print(heuristic(Node(test, list1), adjacents1, target, distancesTo)) 
     
-    # Can loop through every blue node not in target row or column and do it
-#    if (heuristic(initialNode, target, distancesTo) > 250):
-#        print("dog")
-#        if target not in visited1 and firstTarget==1:
-#            print("meow")
-#            visited1.append(target)
-#            previousActions = []
-#            lenpreviousActions = 250
-#            actions = []
-#            print(TARGET1)
-#            print(blueSquares(initialNode.board, TARGET1, visited1))
-#            for blueSquare in blueSquares(initialNode.board, TARGET1, visited1):
-#                print("pad")
-#                print(visited1)
-#                print(blueSquare)
-#                if blueSquare not in visited1:
-#                    print("boo")
-#                    actions = search(initialNode.board, blueSquare)
-#                    print("asdfasd")
-#                if actions and len(actions) < lenpreviousActions:
-#                    print("bad")
-#                    lenpreviousActions = len(actions)
-#                    previousActions = actions
-#            print("doo")        
-           # new = newBoard2(initialNode.board, previousActions)
-          #  if search(new, target):
-         #       return previousActions + search(new, target)
-            
-            
-        #return None
-    for i in range(10000):
-        bigNode = Node(board, [])
-        heapq.heappush(priorityQueue, (10000, bigNode))
-
-    print("moo")       
+     
     generatedCount = 1
     while priorityQueue:
         expandedNode = heapq.heappop(priorityQueue)
@@ -441,27 +379,34 @@ def heuristic(node: Node, target: Coord, distancesTo):
     if not (node.board).get(target):
         return len(node.prevActions)
     
-    rowValue = estimate_move(node, target, distancesTo, True)
-    colValue = estimate_move(node, target, distancesTo, False)
+    rowValue = estimate_move(node.board, target, distancesTo, True)
+    colValue = estimate_move(node.board, target, distancesTo, False)
       
     return 1.001*min(rowValue, colValue) + len(node.prevActions)    
 
-def estimate_move(node: Node, target: Coord, distancesTo, isRow):
+# predict remaining moves
+def remaining_moves(board, target, distancesTo):
+    rowValue = estimate_move(board, target, distancesTo, True)
+    colValue = estimate_move(board, target, distancesTo, False)
+    return min(rowValue, colValue)
+
+
+def estimate_move(board, target: Coord, distancesTo, isRow):
     # If target is gone
-    if not (node.board).get(target):
-        return len(node.prevActions)
+    if not board.get(target):
+        return 0
     value = 0      
     if isRow: 
-        rowSegments = find_segments(node.board, target, row=True)
+        rowSegments = find_segments(board, target, row=True)
         for rowSegment in rowSegments:
             if rowSegment:
-                value += dist_to_segment2(node.board, target, rowSegment, True, distancesTo)
+                value += dist_to_segment2(board, target, rowSegment, True, distancesTo)
                 #rows.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))       
     else:
-        colSegments = find_segments(node.board, target, row=False)
+        colSegments = find_segments(board, target, row=False)
         for colSegment in colSegments:
             if colSegment: 
-                value += dist_to_segment2(node.board, target, colSegment, False, distancesTo)
+                value += dist_to_segment2(board, target, colSegment, False, distancesTo)
     return value            
     
 # Finds distance between closest adjacent square to red and target   
@@ -576,9 +521,10 @@ def newBoard2(board, placeactions: [PlaceAction]):
         updateRowCol(new)
     return new    
 
-def blueSquares(board, target, visited1):
+# Find blue squares
+def findBlueSquares(board):
     blueSquares = []
     for key, colour in board.items():
-        if colour==PlayerColor.BLUE and not (key.c==target.c or key.r==target.r) and key not in visited1:
+        if colour==PlayerColor.BLUE:
             blueSquares.append(key)
     return blueSquares        
