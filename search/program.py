@@ -171,6 +171,9 @@ def search(
         A list of "place actions" as PlaceAction instances, or `None` if no
         solution is possible.
     """
+    print("map11111111111111111111111111")
+    print(render_board(board, ansi=True))
+    print("map22222222222222222222222222")
     
     # Set target
     TARGET = target
@@ -193,15 +196,36 @@ def search(
     
     blueSquares = findBlueSquares(board)
     notPossible = True
-    distance2 = {}
-    for blueSquare in blueSquares:
-        for pos in range(11):
-            distance2[Coord(blueSquare.r, pos)] = djikstra(board, Coord(blueSquare.r, pos))
-            distance2[Coord(pos, blueSquare.c)] = djikstra(board, Coord(pos, blueSquare.c))
-        if remaining_moves(board, blueSquare, distance2) < 250:
-            notPossible = False
-    if notPossible:
-        return None        
+    # Will make this more efficient, can change it, leaving it now to test
+    removableList = removeableBlueSquares(board)
+    if not len(removableList):
+        return None
+    
+    # If not reachable
+    if remaining_moves(board, target, distancesTo) >= 250:
+        min = 1000
+        sequence = []
+        for square in removableList:
+            canRemove = False
+            print("Mannnnnnnnnnnnnnnnnn")
+            print(min)
+            print(square)
+            actions = search(board, square)
+            newBoard2 = board.copy()
+            for action in actions: 
+                newBoard2 = updateBoard(newBoard2, action)  
+            numMoves = remaining_moves(newBoard2, target) 
+            print("numMoves" + str(numMoves))  
+            # If predicted next moves are less than current minimum
+            if numMoves < min:
+                newActions = actions + search(newBoard2, target)
+                canRemove = True
+            if len(newActions) < min and canRemove: 
+                min = len(newActions)
+                sequence = newActions
+        return sequence        
+    
+    
 
 
     
@@ -385,7 +409,13 @@ def heuristic(node: Node, target: Coord, distancesTo):
     return 1.001*min(rowValue, colValue) + len(node.prevActions)    
 
 # predict remaining moves
-def remaining_moves(board, target, distancesTo):
+def remaining_moves(board, target, distancesTo={}):
+    if not distancesTo:
+        distancesTo = {}
+        for pos in range(11):
+            distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
+            distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))   
+
     rowValue = estimate_move(board, target, distancesTo, True)
     colValue = estimate_move(board, target, distancesTo, False)
     return min(rowValue, colValue)
@@ -528,3 +558,16 @@ def findBlueSquares(board):
         if colour==PlayerColor.BLUE:
             blueSquares.append(key)
     return blueSquares        
+
+# Give me a list of the removable blue squares
+def removeableBlueSquares(board):
+    blueSquares = findBlueSquares(board)
+    removableList = []
+    distance2 = {}
+    for blueSquare in blueSquares:
+        for pos in range(11):
+            distance2[Coord(blueSquare.r, pos)] = djikstra(board, Coord(blueSquare.r, pos))
+            distance2[Coord(pos, blueSquare.c)] = djikstra(board, Coord(pos, blueSquare.c))
+        if remaining_moves(board, blueSquare, distance2) < 250:
+            removableList.append(blueSquare)
+    return removableList
