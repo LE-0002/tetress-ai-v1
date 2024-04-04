@@ -37,6 +37,16 @@ tetrominoes = [
     [Coord(0, 0), Coord(1, 0), Coord(1, 1), Coord(2, 1)] # S
 ]
 
+# With wrapping included now
+def manhattan(target, square):
+    height = abs(target.r - square.r)
+    width = abs(target.c - square.c)
+    if height > 5:
+        height = 11 - max(target.r, square.r) + min(target.r, square.r)
+    if width > 5:
+        width = 11 - max(target.c, square.c) + min(target.c, square.c)
+    return math.ceil((width + height) / 4.0) 
+
 # Basic structure of a node to be added to priority queue
 # Still to be modified as going along
 class Node: 
@@ -88,6 +98,37 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
 times = 0
 current = 0  
 repeated = {}
+minimum = 1000
+
+def repeatedSearch(
+    board: dict[Coord, PlayerColor], 
+    target: Coord
+) -> list[PlaceAction] | None:
+    removableList = removeableBlueSquares(board)
+    if not len(removableList):
+        return None
+    
+    sequence = []
+    queue = []
+    heapq.heappush(queue, (0, 1))
+    for square in removableList:
+    # If it is minimum moves then do it
+        actions = search(board, square)
+        newBoard2 = board.copy()
+        
+        # Update the board
+        for action in actions: 
+            newBoard2 = updateBoard(newBoard2, action) 
+        newNode = Node(newBoard2, actions)
+        numMoves = remaining_moves(newBoard2, target) 
+        heapq.heappush(queue, (numMoves + len(newNode.actions)))
+        # Calculate number of moves to then get rid of now target
+    
+    while queue: 
+        output = heapq.pop(queue)
+        if output[0] < 250: 
+            repeatedSearch(output[1].board, target)
+    return None
 
 def search(
     board: dict[Coord, PlayerColor], 
@@ -97,7 +138,8 @@ def search(
     print("map11111111111111111111111111")
     print(render_board(board, ansi=True))
     print("map22222222222222222222222222")
-    
+    global current
+    print(current)
     # Set target
     TARGET = target
     print(TARGET)
@@ -109,8 +151,7 @@ def search(
         if not board.get(Coord(pos, target.c)):
             distancesTo[Coord(pos, target.c)] = bfs(board, Coord(pos, target.c))
 
-    
-    minimum = 1000
+    global minimum
     # If not reachable
     if remaining_moves(board, target, distancesTo) >= 250:
         removableList = removeableBlueSquares(board)
@@ -118,33 +159,41 @@ def search(
             return None
         
         sequence = []
-        minimum2 = 1000
-        # If square is removable 
-        for square in removableList:
-            global current
-            value1 = remaining_moves(board, square)
-            #Calculates minimum moves to get rid of it
-            if value1 <= minimum2:
-                minimum2 = value1
-        for square in removableList:
-            if remaining_moves(board, square)<=minimum2:
-                actions = search(board, square)
-                newBoard2 = board.copy()
-                # Update the board
-                for action in actions: 
-                    newBoard2 = updateBoard(newBoard2, action) 
 
-                # Calculate number of moves to then get rid of now target
-                numMoves = remaining_moves(newBoard2, target) 
-                current += numMoves + len(actions) 
-                # If predicted next moves are less than current minimum
-                if current < minimum:
-                    if numMoves <= 250:
-                        current = 0
-                    newActions = actions + search(newBoard2, target)
-                    if len(newActions) < minimum: 
-                        minimum = len(newActions)
-                        sequence = newActions
+        removableList = removeableBlueSquares(board)
+        if not len(removableList):
+            return None
+        
+        sequence = []
+        queue = []
+        for square in removableList:
+        # If it is minimum moves then do it
+            actions = search(board, square)
+            newBoard2 = board.copy()
+            
+            # Update the board
+            for action in actions: 
+                newBoard2 = updateBoard(newBoard2, action) 
+            newNode = Node(newBoard2, actions)
+            numMoves = remaining_moves(newBoard2, target) 
+            heapq.heappush(queue, (numMoves + len(newNode.prevActions) + 0.001*manhattan(target, square), newNode))
+            # Calculate number of moves to then get rid of now target
+        
+        while queue: 
+            output = heapq.heappop(queue)
+            if output[0] < 250: 
+                return output[1].prevActions + search(output[1].board, target)
+            else:
+                sequence = output[1].prevActions + search(output[1].board, target)
+                board5 = board.copy()
+                print(render_board(board, ansi=True))
+                for action in sequence: 
+                    board5 = updateBoard(board5, action)
+                    print(render_board(updateBoard(board5, action), ansi=True))
+
+                return output[1].prevActions + search(output[1].board, target)
+     
+
         print("*********************")
         board5 = board.copy()
         print(render_board(board, ansi=True))
@@ -174,8 +223,8 @@ def search(
         count += 1
         print(render_board(expandedNode[1].board, target, ansi=True))
         if expandedNode and checkTarget(expandedNode[1].board, target): 
-            print("expanded nodes: " + str(count))
-            print("generated nodes: " + str(generatedCount))
+            #print("expanded nodes: " + str(count))
+            #print("generated nodes: " + str(generatedCount))
             break
         adjacents = findAdjacent(expandedNode[1].board)
        
