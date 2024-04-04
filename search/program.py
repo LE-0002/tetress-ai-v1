@@ -125,29 +125,6 @@ def search(
     target: Coord
 ) -> list[PlaceAction] | None:
     
-    board11 = djikstra(board, Coord(0,0))
-    board12 = bfs(board, Coord(0,0))
-
-    checker = True
-    for i in range(11):
-        for j in range(11):
-            if board11[Coord(i,j)]==board12[Coord(i,j)]:
-                # Add comment
-                checker = True
-            else:
-                print(False) 
-                return
-    print(True)
-    return         
-            
-    
-    for key1, value1 in djikstra(board, target):
-        print(str(key1) + ":" + str(value1))
-    return    
-    
-    for key, value in bfs2(board, target).items():
-        print(str(key) + ":" + str(board11[key]) + " vs " + str(value))  
-    return     
     
     """
     This is the entry point for your submission. You should modify this
@@ -175,8 +152,10 @@ def search(
 
     distancesTo = {}
     for pos in range(11):
-        distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
-        distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))
+        if not board.get(Coord(target.r, pos)):
+            distancesTo[Coord(target.r, pos)] = bfs(board, Coord(target.r, pos))
+        if not board.get(Coord(pos, target.c)):
+            distancesTo[Coord(pos, target.c)] = bfs(board, Coord(pos, target.c))
     
 
     # Will make this more efficient, can change it, leaving it now to test
@@ -257,6 +236,9 @@ def search(
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
                         newNode = Node(newBoard, newList)
+                        if find_segments(newBoard, target, row=False)==[[6,10]]:
+                            print(render_board(expandedNode[1].board, ansi=True))
+                            print(render_board(newBoard, ansi=True))
                         heuristicValue = heuristic(newNode, target, distancesTo)
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
        
@@ -332,9 +314,12 @@ def dist_to_segment2(board, target, segment, row, distancesTo):
         if row:
             square = Coord(target.r, pos%11)
         else: 
+            #print("cat" + str(segment))
             square = Coord(pos%11, target.c)
+        if not distancesTo.get(square):
+            distancesTo[square] = bfs(board, square)    
         distances.append(closestSquare(board, square, distancesTo))
-    result = min(distances) + 1 + upperBound - lowerBound     
+   
     return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0)   
 
 
@@ -370,8 +355,8 @@ def remaining_moves(board, target, distancesTo={}):
     if not distancesTo:
         distancesTo = {}
         for pos in range(11):
-            distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
-            distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))   
+            distancesTo[Coord(target.r, pos)] = bfs(board, Coord(target.r, pos))
+            distancesTo[Coord(pos, target.c)] = bfs(board, Coord(pos, target.c))   
 
     rowValue = estimate_move(board, target, distancesTo, True)
     colValue = estimate_move(board, target, distancesTo, False)
@@ -396,7 +381,7 @@ def estimate_move(board, target: Coord, distancesTo, isRow):
                 value += dist_to_segment2(board, target, colSegment, False, distancesTo)
     return value            
     
-# Finds distance between closest adjacent square to red and target   
+# Finds distance between closest adjacent square to red and square on target row or column  
 def closestSquare(board: dict[Coord, PlayerColor], target: Coord, distancesTo):
     adjacents = findAdjacent(board) 
     # Will fix this later to not use an array, but keeping it here bcuz it's quick and easy
@@ -523,8 +508,8 @@ def removeableBlueSquares(board):
     distance2 = {}
     for blueSquare in blueSquares:
         for pos in range(11):
-            distance2[Coord(blueSquare.r, pos)] = djikstra(board, Coord(blueSquare.r, pos))
-            distance2[Coord(pos, blueSquare.c)] = djikstra(board, Coord(pos, blueSquare.c))
+            distance2[Coord(blueSquare.r, pos)] = bfs(board, Coord(blueSquare.r, pos))
+            distance2[Coord(pos, blueSquare.c)] = bfs(board, Coord(pos, blueSquare.c))
         if remaining_moves(board, blueSquare, distance2) < 250:
             removableList.append(blueSquare)
     return removableList
