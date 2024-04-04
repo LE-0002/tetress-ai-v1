@@ -49,40 +49,7 @@ class Node:
         min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
         min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))     
         return min1 < min2
-# Might need modifications
-def djikstra(board, square):
-    dist = {}
-    visited = {}
-   
-    for i in range(11):
-        for j in range(11):
-            dist[Coord(i, j)] = 1000
-            if Coord(i,j) in board.keys():
-                visited[Coord(i,j)]=1
-            else: 
-                visited[Coord(i,j)] = 0    
 
-    dist[square] = 0
-    pq = []
-    # initialise the heap
-    for i in range(11):
-        for j in range(11):
-            heapq.heappush(pq, (dist[Coord(i, j)], Coord(i, j)))
-
-    
-    while pq:
-        coord = heapq.heappop(pq)[1]
-        if not visited[coord]:
-            visited[coord] = 1
-            directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
-            for direction in directions:
-                newSquare = coord + direction
-                # If square is empty and coord also empty
-                if ((not board.get(newSquare)) and (not board.get(coord)) and dist[coord] + 1 < dist[newSquare]): 
-                    dist[newSquare] = dist[coord] + 1
-                    heapq.heappush(pq, (dist[newSquare], newSquare))
-                
-    return dist
 
 
 # function that deletes full rows or columns and returns an updated board
@@ -114,33 +81,19 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
         for col in range(11):
             if row in row2Replace or col in col2Replace:
                 board.pop(Coord(row, col))
+
+
                
     
 times = 0
 current = 0  
-minimum = 1000  
+repeated = {}
 
 def search(
     board: dict[Coord, PlayerColor], 
     target: Coord
 ) -> list[PlaceAction] | None:
     
-    
-    """
-    This is the entry point for your submission. You should modify this
-    function to solve the search problem discussed in the Part A specification.
-    See `core.py` for information on the types being used here.
-
-    Parameters:
-        `board`: a dictionary representing the initial board state, mapping
-            coordinates to "player colours". The keys are `Coord` instances,
-            and the values are `PlayerColor` instances.  
-        `target`: the target BLUE coordinate to remove from the board.
-    
-    Returns:
-        A list of "place actions" as PlaceAction instances, or `None` if no
-        solution is possible.
-    """
     print("map11111111111111111111111111")
     print(render_board(board, ansi=True))
     print("map22222222222222222222222222")
@@ -149,38 +102,41 @@ def search(
     TARGET = target
     print(TARGET)
 
-
     distancesTo = {}
     for pos in range(11):
         if not board.get(Coord(target.r, pos)):
             distancesTo[Coord(target.r, pos)] = bfs(board, Coord(target.r, pos))
         if not board.get(Coord(pos, target.c)):
             distancesTo[Coord(pos, target.c)] = bfs(board, Coord(pos, target.c))
-    
-
-    # Will make this more efficient, can change it, leaving it now to test
 
     
+    minimum = 1000
     # If not reachable
     if remaining_moves(board, target, distancesTo) >= 250:
         removableList = removeableBlueSquares(board)
         if not len(removableList):
             return None
-        global minimum
+        
         sequence = []
+        minimum2 = 1000
+        # If square is removable 
         for square in removableList:
             global current
-            print("Mannnnnnnnnnnnnnnnnn")
-            print(current)
-            print(square)
-            if remaining_moves(board, square) <= minimum:
+            value1 = remaining_moves(board, square)
+            #Calculates minimum moves to get rid of it
+            if value1 <= minimum2:
+                minimum2 = value1
+        for square in removableList:
+            if remaining_moves(board, square)<=minimum2:
                 actions = search(board, square)
                 newBoard2 = board.copy()
+                # Update the board
                 for action in actions: 
-                    newBoard2 = updateBoard(newBoard2, action)  
+                    newBoard2 = updateBoard(newBoard2, action) 
+
+                # Calculate number of moves to then get rid of now target
                 numMoves = remaining_moves(newBoard2, target) 
-                current += numMoves + len(actions)
-                print("numMoves" + str(numMoves))  
+                current += numMoves + len(actions) 
                 # If predicted next moves are less than current minimum
                 if current < minimum:
                     if numMoves <= 250:
@@ -339,7 +295,7 @@ def toBeFilled(board, target, row):
     return count        
      
 
-
+# 
 def heuristic(node: Node, target: Coord, distancesTo):
     # If target is gone
     if not (node.board).get(target):
