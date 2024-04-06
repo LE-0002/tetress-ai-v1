@@ -95,22 +95,21 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
 
                
     
-times = 0
-current = 0  
-repeated = {}
-minimum = 1000
+
 
 def repeatedSearch(
     board: dict[Coord, PlayerColor], 
-    target: Coord
+    target: Coord, count, depth
 ) -> list[PlaceAction] | None:
+    if count > depth:
+        return []
+
     removableList = removeableBlueSquares(board)
     if not len(removableList):
         return None
     
     sequence = []
     queue = []
-    heapq.heappush(queue, (0, 1))
     for square in removableList:
     # If it is minimum moves then do it
         actions = search(board, square)
@@ -121,14 +120,73 @@ def repeatedSearch(
             newBoard2 = updateBoard(newBoard2, action) 
         newNode = Node(newBoard2, actions)
         numMoves = remaining_moves(newBoard2, target) 
-        heapq.heappush(queue, (numMoves + len(newNode.actions)))
+        if numMoves < 250:
+            return actions + search(newBoard2, target)
         # Calculate number of moves to then get rid of now target
     
     while queue: 
-        output = heapq.pop(queue)
+        output = heapq.heappop(queue)
         if output[0] < 250: 
-            repeatedSearch(output[1].board, target)
-    return None
+            return output[1].prevActions + search(output[1].board, target)
+        else:
+            if count < depth:
+                if repeatedSearch2(output[1].board, target, count+1, depth):
+                    return output[1].prevActions + repeatedSearch2(output[1].board, target, count+1, depth)
+                    board5 = board.copy()
+                    print(render_board(board, ansi=True))
+                    for action in sequence: 
+                        board5 = updateBoard(board5, action)
+                        print(render_board(updateBoard(board5, action), ansi=True))
+            else:
+                return []       
+
+def repeatedSearch2(
+    board: dict[Coord, PlayerColor], 
+    target: Coord, count, depth
+) -> list[PlaceAction] | None:
+    if count > depth:
+        return []
+
+    removableList = removeableBlueSquares(board)
+    if not len(removableList):
+        return None
+    
+
+    queue = []
+    for square in removableList:
+    # If it is minimum moves then do it
+        actions = search(board, square)
+        newBoard2 = board.copy()
+        
+        # Update the board
+        for action in actions: 
+            newBoard2 = updateBoard(newBoard2, action) 
+        newNode = Node(newBoard2, actions)
+        numMoves = remaining_moves(newBoard2, target) 
+        heapq.heappush(queue, (numMoves + len(newNode.prevActions) + 0.001*manhattan(target, square), newNode))
+        # Calculate number of moves to then get rid of now target
+    
+    while queue: 
+        output = heapq.heappop(queue)
+        if output[0] < 250: 
+            return output[1].prevActions + search(output[1].board, target)
+        else:
+            if count < depth:
+                if repeatedSearch2(output[1].board, target, count+1, depth):
+                    return output[1].prevActions + repeatedSearch2(output[1].board, target, count+1, depth)
+            else:
+                return []       
+
+
+def repeatedSearch3(
+    board: dict[Coord, PlayerColor], 
+    target: Coord, count
+) -> list[PlaceAction] | None:
+    for i in range(11, 12):
+        print("***")
+        value = repeatedSearch2(board, target, 0, i)
+        if value:
+            return value
 
 def search(
     board: dict[Coord, PlayerColor], 
@@ -138,8 +196,7 @@ def search(
     print("map11111111111111111111111111")
     print(render_board(board, ansi=True))
     print("map22222222222222222222222222")
-    global current
-    print(current)
+
     # Set target
     TARGET = target
     print(TARGET)
@@ -154,55 +211,12 @@ def search(
     global minimum
     # If not reachable
     if remaining_moves(board, target, distancesTo) >= 250:
-        removableList = removeableBlueSquares(board)
-        if not len(removableList):
-            return None
-        
-        sequence = []
-
-        removableList = removeableBlueSquares(board)
-        if not len(removableList):
-            return None
-        
-        sequence = []
-        queue = []
-        for square in removableList:
-        # If it is minimum moves then do it
-            actions = search(board, square)
-            newBoard2 = board.copy()
-            
-            # Update the board
-            for action in actions: 
-                newBoard2 = updateBoard(newBoard2, action) 
-            newNode = Node(newBoard2, actions)
-            numMoves = remaining_moves(newBoard2, target) 
-            heapq.heappush(queue, (numMoves + len(newNode.prevActions) + 0.001*manhattan(target, square), newNode))
-            # Calculate number of moves to then get rid of now target
-        
-        while queue: 
-            output = heapq.heappop(queue)
-            if output[0] < 250: 
-                return output[1].prevActions + search(output[1].board, target)
-            else:
-                sequence = output[1].prevActions + search(output[1].board, target)
-                board5 = board.copy()
-                print(render_board(board, ansi=True))
-                for action in sequence: 
-                    board5 = updateBoard(board5, action)
-                    print(render_board(updateBoard(board5, action), ansi=True))
-
-                return output[1].prevActions + search(output[1].board, target)
+        print("onenenenenen")
+        return repeatedSearch3(board, target,5)
      
 
-        print("*********************")
-        board5 = board.copy()
-        print(render_board(board, ansi=True))
-        for action in sequence: 
-            board5 = updateBoard(board5, action)
-            print(render_board(updateBoard(board5, action), ansi=True))
         
-        return sequence        
-    
+
     
 
 
