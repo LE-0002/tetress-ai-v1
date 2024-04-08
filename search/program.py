@@ -109,11 +109,7 @@ def search(
     # If there are no removable blocks, will return no solutions
     # Otherwise will identify another row(s)/column(s) to remove before target row/column
     if remaining_moves(board, target, distancesTo) >= MAX_NUM_MOVES:
-        removableList = removeableBlueSquares(board)
-        if not len(removableList):
-            return None
-        else: 
-            return repeatedSearch(board, target, 0, len(removableList))
+            return repeatedSearch(board, target, 0, MAX_NUM_MOVES)
      
 
     # Create prioirty queue
@@ -127,7 +123,7 @@ def search(
     while priorityQueue:
         # Pop next node with lowest heuristic value
         expandedNode = heapq.heappop(priorityQueue)
-        
+
         # If target is removed
         if expandedNode and not expandedNode[1].board.get(target): 
             break
@@ -139,6 +135,7 @@ def search(
             for tetromino in tetrominoes: 
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
+                        
                         # Update the board and previous actions list
                         newBoard = updateBoard(expandedNode[1].board, item)
                         newList = expandedNode[1].prevActions.copy()
@@ -344,9 +341,7 @@ def validMove(board, square: Coord, tetromino: [Coord]):
     # If square is occupied, return
     if board.get(square):
         return []
-    # Check if tetromino can be placed   
-    # i represents orientation
-    # j represents piece filled   
+    # Check if tetromino can be placed     
     for orientation in range(TETROMINO_SIZE):
         valid = True
         actions = []
@@ -382,30 +377,11 @@ def toBeFilled(board, target, row):
             count += 1
     return count 
 
-# Find blue squares
-def findBlueSquares(board):
-    blueSquares = []
-    for key, colour in board.items():
-        if colour==PlayerColor.BLUE:
-            blueSquares.append(key)
-    return blueSquares        
-
-# Generates a list of removable blue squares
-def removeableBlueSquares(board):
-    blueSquares = findBlueSquares(board)
-    removableList = []
-    distance = {}
-    for blueSquare in blueSquares:
-        for pos in range(BOARD_N):
-            distance[Coord(blueSquare.r, pos)] = bfs(board, Coord(blueSquare.r, pos))
-            distance[Coord(pos, blueSquare.c)] = bfs(board, Coord(pos, blueSquare.c))
-        if remaining_moves(board, blueSquare, distance) < MAX_NUM_MOVES:
-            removableList.append(blueSquare)
-    return removableList
 
 
 #***************************************************************************************************************#
 # Functions for recursive case, where a different row/column has to be removed before the target row/column
+# and where there is no solution
 #***************************************************************************************************************#
 def repeatedSearch(
     board: dict[Coord, PlayerColor], 
@@ -414,8 +390,9 @@ def repeatedSearch(
     if count > depth:
         return []
 
-    removableList = removeableBlueSquares(board)
-    if not len(removableList):
+    removableList = uniqueBlueSquares(board)
+    # If none can be removed, there is no solution
+    if not removableList:
         return None
 
     queue = []
@@ -430,7 +407,7 @@ def repeatedSearch(
         newNode = Node(newBoard2, actions)
         numMoves = remaining_moves(newBoard2, target) 
         heapq.heappush(queue, (numMoves + len(newNode.prevActions) + 0.001*manhattan(target, square), newNode))
-        # Calculate number of moves to then get rid of now target
+
     
     while queue: 
         output = heapq.heappop(queue)
@@ -443,7 +420,63 @@ def repeatedSearch(
             else:
                 return []       
 
-# With wrapping included now
+# Find blue squares
+def findBlueSquares(board):
+    blueSquares = []
+    for key, colour in board.items():
+        if colour==PlayerColor.BLUE:
+            blueSquares.append(key)
+    return blueSquares        
+
+# Generates a list of removable blue squares
+def removeableBlueSquares(board, distance):
+    blueSquares = findBlueSquares(board)
+    removableList = []
+    for blueSquare in blueSquares:
+        for pos in range(BOARD_N):
+            distance[Coord(blueSquare.r, pos)] = bfs(board, Coord(blueSquare.r, pos))
+            distance[Coord(pos, blueSquare.c)] = bfs(board, Coord(pos, blueSquare.c))
+        if remaining_moves(board, blueSquare, distance) < MAX_NUM_MOVES:
+            removableList.append(blueSquare)
+    return removableList
+
+# Finds squares in rows or columns that require fewest moves to remove, as opposed to using all squares
+def uniqueBlueSquares(board):
+    distancesTo = {}
+    removableList = removeableBlueSquares(board, distancesTo)
+    if not removableList:
+        return []
+    minimum = MAX_NUM_MOVES
+    newList = []
+    square = Coord(0,0)
+    # for rows find easiest blue squares to remove
+    for row in range(BOARD_N):
+        valid = False
+        for col in range(BOARD_N):
+            if Coord(row, col) in removableList:
+                value = estimate_move(board, Coord(row, col), distancesTo, True)
+                if value < minimum:
+                    minimum = value
+                    square = Coord(row, col)
+                    valid = True
+        if valid: 
+            newList.append(square)
+
+    # For columns, find easiest ones to remove
+    for col in range(BOARD_N):
+        valid = False
+        for row in range(BOARD_N):
+            if Coord(row, col) in removableList:
+                value = estimate_move(board, Coord(row, col), distancesTo, False)
+                if value < minimum:
+                    minimum = value
+                    square = Coord(row, col)
+                    valid = True
+        if valid: 
+            newList.append(square) 
+    return newList           
+
+# Calculates manhattan distance between two squares taking into account wrapping of board
 def manhattan(target, square):
     height = abs(target.r - square.r)
     width = abs(target.c - square.c)
@@ -452,3 +485,5 @@ def manhattan(target, square):
     if width > BOARD_N//2:
         width = BOARD_N - max(target.c, square.c) + min(target.c, square.c)
     return math.ceil((width + height) / float(TETROMINO_SIZE)) 
+
+
