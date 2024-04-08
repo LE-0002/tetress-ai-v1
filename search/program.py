@@ -6,68 +6,18 @@ from .utils import render_board
 import heapq
 import math
 
-TARGET = Coord(0, 0)
-
-def bfs(board, square, target):
-    queue = []
-    defaultV = 0
-    defaultC = -1
-    coordKeys = []
-    for r in range(11):
-        for c in range(11):
-            coordKeys.append(Coord(r, c))
-
-    visited = dict.fromkeys(coordKeys, defaultV)
-    counts = dict.fromkeys(coordKeys, defaultC)
-
-    queue.append(square)
-    counts[square] = 0
-    while queue: 
-        coord = queue.pop(0)
-        if coord == target: # stop searching if found target
-            break
-
-        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
-        # if it hasn't been visited yet
-        if visited[coord]==0:
-            visited[coord]= 1
-            # checking adjacent coords
-            for direction in directions: 
-                # if it is not visited
-                if visited[coord + direction]==0:
-                    if isEmpty(board, (coord + direction)):
-                        counts[coord + direction] = 1 + counts[coord]
-                        queue.append(coord + direction)
-    return counts   
-
-# With wrapping included now
-def manhattan(board, target, square):
-    height = abs(target.r - square.r)
-    width = abs(target.c - square.c)
-    if height > 5:
-        height = 11 - max(target.r, square.r) + min(target.r, square.r)  
-        row = (min(target.r, square.r)-1)%11
-        pos1 = square.c
-        pos2 = (square.c+1)%11
-        while (pos1!=pos2):
-            if board.get(Coord(row, pos1))==PlayerColor.BLUE:
-                pos1 = (pos1-1)%11
-            elif (board.get(Coord(row, pos2))==PlayerColor.BLUE):
-                pos2 = (pos2+1)%11
-            else:
-                break    
-        pos1 = (pos1+1)%11
-        pos2 = (pos2+1)%11
-        if pos1==pos2:
-            additional = 0    
-    if width > 5:
-        width = 11 - max(target.c, square.c) + min(target.c, square.c)
-    return math.ceil((width + height) / 4.0)
+# Constants
+TARGET = Coord(0, 0)    # Set a default value for target, which will later be reassigned
+BOARD_N = 11
+MAX_DIST = 1000         # Max distance is actually smaller than this, but chose a simple number of simplicity
+MAX_NUM_MOVES = 250     # maximum distance divided by 4, the tetromino size
+P = 0.001               # Used to break ties in the heuristic function
+TETROMINO_SIZE = 4 
+VISITED = 1
+UNVISITED = 0 
 
 
-
-# Hardcoded the tetrominoes - not sure if this is best practice or whether
-# I should use rotation instead
+# Hardcoded tetrominoes
 tetrominoes = [
     [Coord(0,0), Coord(0,1), Coord(0, 2), Coord(0, 3)], # I
     [Coord(0,0), Coord(1, 0), Coord(2, 0), Coord(3, 0)], # I
@@ -90,8 +40,9 @@ tetrominoes = [
     [Coord(0, 0), Coord(1, 0), Coord(1, 1), Coord(2, 1)] # S
 ]
 
+
 # Basic structure of a node to be added to priority queue
-# Still to be modified as going along
+# Stores board and list of previous actions
 class Node: 
     def __init__(self, board: dict[Coord, PlayerColor], prevActions: list[PlaceAction]):
         self.board = board
@@ -99,43 +50,10 @@ class Node:
 
     # Fixed - might be able to improve on it
     def __lt__(self, other):
-        min1 = min(toBeFilled(self.board, TARGET, True), toBeFilled(self.board, TARGET, False))
-        min2 = min(toBeFilled(other.board, TARGET, True), toBeFilled(other.board, TARGET, False))     
+        min1 = min(toBeFilled(self.board, TARGET, row=True), toBeFilled(self.board, TARGET, row=False))
+        min2 = min(toBeFilled(other.board, TARGET, row=True), toBeFilled(other.board, TARGET, row=False))     
         return min1 < min2
-# Might need modifications
-def djikstra(board, square):
-    dist = {}
-    visited = {}
-   
-    for i in range(11):
-        for j in range(11):
-            dist[Coord(i, j)] = 1000
-            if Coord(i,j) in board.keys():
-                visited[Coord(i,j)]=1
-            else: 
-                visited[Coord(i,j)] = 0    
 
-    dist[square] = 0
-    pq = []
-    # initialise the heap
-    for i in range(11):
-        for j in range(11):
-            heapq.heappush(pq, (dist[Coord(i, j)], Coord(i, j)))
-
-    
-    while pq:
-        coord = heapq.heappop(pq)[1]
-        if not visited[coord]:
-            visited[coord] = 1
-            directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
-            for direction in directions:
-                newSquare = coord + direction
-                # If square is empty and coord also empty
-                if ((not board.get(newSquare)) and (not board.get(coord)) and dist[coord] + 1 < dist[newSquare]): 
-                    dist[newSquare] = dist[coord] + 1
-                    heapq.heappush(pq, (dist[newSquare], newSquare))
-                
-    return dist
 
 
 # function that deletes full rows or columns and returns an updated board
@@ -144,9 +62,9 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
     col2Replace = []
     
     #find full rows
-    for row in range(11):
+    for row in range(BOARD_N):
         foundEmpty = True
-        for col in range(11):
+        for col in range(BOARD_N):
             # If it is empty
             if not board.get(Coord(row, col)): 
                 foundEmpty = False
@@ -154,205 +72,212 @@ def updateRowCol(board: dict[Coord, PlayerColor]):
             row2Replace.append(row)
     
     #find full columns
-    for col in range(11):
+    for col in range(BOARD_N):
         foundEmpty = True
-        for row in range(11):
+        for row in range(BOARD_N):
             # If it is empty
             if not board.get(Coord(row, col)): 
                 foundEmpty = False
         if foundEmpty:
-            col2Replace.append(row)
+            col2Replace.append(col)
     
-    for row in range(11):
-        for col in range(11):
+    # If it a square in a full column or row, remove it
+    for row in range(BOARD_N):
+        for col in range(BOARD_N):
             if row in row2Replace or col in col2Replace:
                 board.pop(Coord(row, col))
-    
-    
+
 
 
 def search(
     board: dict[Coord, PlayerColor], 
     target: Coord
 ) -> list[PlaceAction] | None:
-    
-    """
-    This is the entry point for your submission. You should modify this
-    function to solve the search problem discussed in the Part A specification.
-    See `core.py` for information on the types being used here.
 
-    Parameters:
-        `board`: a dictionary representing the initial board state, mapping
-            coordinates to "player colours". The keys are `Coord` instances,
-            and the values are `PlayerColor` instances.  
-        `target`: the target BLUE coordinate to remove from the board.
-    
-    Returns:
-        A list of "place actions" as PlaceAction instances, or `None` if no
-        solution is possible.
-    """
-    
     # Set target
     TARGET = target
-    coords = []
-    #for i in range(11):
-     #   for j in range(11):
-      #      if Coord(i, j) not in board.keys():
-       #         coords.append(Coord(i, j))
-    #for coord in coords: 
-     #   djikstra(board, coord, target)  
-    #print(render_board(board, target, ansi=True))
-    distancesTo = {}
-    for pos in range(11):
-        distancesTo[Coord(target.r, pos)] = djikstra(board, Coord(target.r, pos))
-        distancesTo[Coord(pos, target.c)] = djikstra(board, Coord(pos, target.c))
-    #print((distancesTo[Coord(8, 4)])[Coord(6,3)])
-    #for key, value in distancesTo[Coord(8, 4)].items():
-    #    print(str(key) + ":" + str(value))
-    priorityQueue = []
-    # To insert into priority queue, 
-    # heapq.heappush(priorityQueue, (priority, Node))
-    # To remove, heapq.heappop(priorityQueue)[1]
 
-    # Create starting node
+    # pre-stores distances to empty squares on target row/column
+    distancesTo = {}
+    for pos in range(BOARD_N):
+        if not board.get(Coord(target.r, pos)):
+            distancesTo[Coord(target.r, pos)] = bfs(board, Coord(target.r, pos))
+        if not board.get(Coord(pos, target.c)):
+            distancesTo[Coord(pos, target.c)] = bfs(board, Coord(pos, target.c))
+
+    # If not reachable, enter repeated search
+    # If there are no removable blocks, will return no solutions
+    # Otherwise will identify another row(s)/column(s) to remove before target row/column
+    if remaining_moves(board, target, distancesTo) >= MAX_NUM_MOVES:
+        removableList = removeableBlueSquares(board)
+        if not len(removableList):
+            return None
+        else: 
+            return repeatedSearch(board, target, 0, len(removableList))
+     
+
+    # Create prioirty queue
+    priorityQueue = []
+    
+    # Create starting node and push it to priority queue
     initialNode = Node(board, [])
     heapq.heappush(priorityQueue, (0, initialNode)) 
 
-    # Will clean up this code, just want to get something working first
-    count = 0
-    # Implementation of search
-    # 
-    #for key, value in bfs(board, target, Coord(0, 0)).items():
-    #    print(str(key) + ":" + str(value))
-
-#    test = {}
-#    for i in range(9):
-#       test[Coord(0, i)] = PlayerColor.BLUE
-#    for j in range(1, 7):
-#       test[Coord(j, 4)] = PlayerColor.RED
-#       if 1<=j<=3:
-#        test[Coord(i, 5)] = PlayerColor.RED 
-#    test[Coord(1, 7)] = PlayerColor.BLUE
-#    list1 = []
-#    for i in range(3):
-#        list1.append(PlaceAction(Coord(0,0), Coord(0, 1), Coord(0, 2), Coord(0, 3)))
-#    render_board(test, Coord(1, 7), ansi=True)
-#    adjacents1 = findAdjacent(test)
-#    print(heuristic(Node(test, list1), adjacents1, target, distancesTo))   
-       
-    generatedCount = 1
+    # Implementation of A* search    
     while priorityQueue:
+        # Pop next node with lowest heuristic value
         expandedNode = heapq.heappop(priorityQueue)
-        count += 1
-        #print(render_board(expandedNode[1].board, target, ansi=True))
-        #print(find_segments(expandedNode[1].board, target, False))
-        #print(dist_to_segment2(expandedNode[1].board, target, [8,10], False, distancesTo))
-        if expandedNode and checkTarget(expandedNode[1].board, target): 
-            #print(render_board(expandedNode[1].board, target, ansi=True))
-            #printPlaceAction(expandedNode[1].prevActions)
-            #print("expanded nodes: " + str(count))
-            #print("generated nodes: " + str(generatedCount))
+        
+        # If target is removed
+        if expandedNode and not expandedNode[1].board.get(target): 
             break
+       
         adjacents = findAdjacent(expandedNode[1].board)
-
-        #print(heuristic(expandedNode[1], target, distancesTo))
-        #if (heuristic(expandedNode[1], target, distancesTo)==4.0009999999999994):
-         #   print("map")
-#          #  row = False
-#            distances = []
-#            segment = [8,10]
-#            upperBound = segment[1] 
-#            lowerBound = segment[0]
-#            if segment[0] > segment[1]:
-#                upperBound = segment[1] + 11
-
-#            for pos in range(lowerBound, upperBound + 1):
-#                if row:
-#                    square = Coord(target.r, pos%11)
-#                else: 
-#                    square = Coord(pos%11, target.c)
-#                distances.append(closestSquare(expandedNode[1].board, square, distancesTo))
-#            print(distances)    
-#            print(math.ceil((min(distances)+1 + upperBound - lowerBound)/4.0))      
-#            print("map")
-#        printAdjacentSquares(adjacents)
-        #print(toBeFilled(expandedNode[1].board, target, False))
-        if not adjacents:
-            break
             
-        # Need to fix issue with adjacent squares and tetrominoes loop
+        # Generates all possible moves based on adjacent blocks to red and diffferent tetrominoes
         for adjacent in adjacents:
             for tetromino in tetrominoes: 
                 if validMove(expandedNode[1].board, adjacent, tetromino):
                     for item in validMove(expandedNode[1].board, adjacent, tetromino):
-                        generatedCount += 1
+                        # Update the board and previous actions list
                         newBoard = updateBoard(expandedNode[1].board, item)
                         newList = expandedNode[1].prevActions.copy()
                         newList.append(item)
+                        
+                        # Create a new node and add it to the priority queue with its heuristic value
                         newNode = Node(newBoard, newList)
                         heuristicValue = heuristic(newNode, target, distancesTo)
-                        #print(heuristicValue)
-                        #print(dist_to_segment2(newNode.board, target, [8, 10], False, distancesTo))
                         heapq.heappush(priorityQueue, (heuristicValue, Node(newBoard, newList)))
-       
-    # The render_board() function is handy for debugging. It will print out a
-    # board state in a human-readable format. If your terminal supports ANSI
-    # codes, set the `ansi` flag to True to print a colour-coded version!
-    #print(render_board(board, target, ansi=True))
 
-    # Do some impressive AI stuff here to find the solution...
-    # ...
-    # ... (your solution goes here!)
-    # ...
+    # If target is removed, return the previous actions of that node
+    return expandedNode[1].prevActions
+   
+
+
+#***************************************************************************************************************#
+# Heuristic-related functions
+#***************************************************************************************************************#
+
+# Calculates the heuristic function
+def heuristic(node: Node, target: Coord, distancesTo):
+    # If target is gone
+    if not (node.board).get(target):
+        return len(node.prevActions)
     
-    # Here we're returning "hardcoded" actions as an example of the expected
-    # output format. Of course, you should instead return the result of your
-    # search algorithm. Remember: if no solution is possible for a given input,
-    # return `None` instead of a list.
+    #Estimates number of moves to fill in row/column
+    movesLeft = remaining_moves(node.board, target, distancesTo)
 
-    if checkTarget(expandedNode[1].board, target):
-        return expandedNode[1].prevActions
+    # Returns minimum number of moves to fill in row or column and adds to 
+    # number of previous actions. The "P" value is used to break ties, 
+    # and ensure that boards with fewer moves to complete are prioritised.   
+    return (1+P)*movesLeft + len(node.prevActions) 
+
+# predict remaining moves
+def remaining_moves(board, target, distancesTo={}):
+    # If distances to squares on target and row were not previously computed
+    if not distancesTo:
+        distancesTo = {}
+        for pos in range(BOARD_N):
+            distancesTo[Coord(target.r, pos)] = bfs(board, Coord(target.r, pos))
+            distancesTo[Coord(pos, target.c)] = bfs(board, Coord(pos, target.c))   
+    
+    # Calculates estimated number of moves to fill in row/column
+    rowValue = estimate_move(board, target, distancesTo, True)
+    colValue = estimate_move(board, target, distancesTo, False)
+    return min(rowValue, colValue)
+
+# Calculates estimated minimum number of moves to fill in row/column
+def estimate_move(board, target: Coord, distancesTo, isRow):
+    # If target is gone
+    if not board.get(target):
+        return 0
+    value = 0 
+    # If filling in row     
+    if isRow: 
+        rowSegments = find_segments(board, target, row=True)
+        for rowSegment in rowSegments:
+            if rowSegment:
+                value += dist_to_segment(board, target, rowSegment, True, distancesTo)    
+    # If filling in column
     else:
-        return None    
+        colSegments = find_segments(board, target, row=False)
+        for colSegment in colSegments:
+            if colSegment: 
+                value += dist_to_segment(board, target, colSegment, False, distancesTo)
+    return value            
 
+# Completes bfs on the board and tracks shortest distance of every coordinate to a square
+def bfs(board, square):
+    visited = {}
+    distances = {}
+    for row in range(BOARD_N):
+        for col in range(BOARD_N):
+            visited[Coord(row,col)] = UNVISITED
+            if (square.r==row and square.c==col):
+                distances[Coord(row,col)] = 0
+            else:
+                distances[Coord(row,col)] = MAX_DIST   
 
-# This function is very buggy
+    queue = []
+    queue.append(square)
+    visited[square] = VISITED
+    while queue: 
+        # pop first in queue
+        coord = queue.pop(0)
+        directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
+        for direction in directions: 
+            # If it is empty and unvisited
+            if not board.get(coord + direction) and not visited[coord + direction] and 1 + distances[coord] < distances[coord + direction]:
+                distances[coord + direction] = 1 + distances[coord]
+                visited[coord + direction] = VISITED
+                queue.append(coord + direction)  
+    return distances              
+
+#***************************************************************************************************************#
+# Segments-related functions
+#***************************************************************************************************************#
+
+# Finds segments of row or column that are empty 
+# Returns segments in a 2D array, with each 1D array storing starting pos and ending pos of segment
 def find_segments(board, target, row: bool):
     segments = []
     segment = []
     count = 0
-
-    for pos in range(22):
+    # Loops through row or column twice to make sure we identify segments correctly
+    for pos in range(BOARD_N*2):
         if row: 
-            square = Coord(target.r, pos%11)
-            nextSquare = Coord(target.r, (pos+1)%11)
-            prevSquare = Coord(target.r, (pos-1)%11)
+            square = Coord(target.r, pos%BOARD_N)
+            nextSquare = Coord(target.r, (pos+1)%BOARD_N)
+            prevSquare = Coord(target.r, (pos-1)%BOARD_N)
         else:
             square = Coord(pos%11, target.c)
-            nextSquare = Coord((pos+1)%11, target.c)
-            prevSquare = Coord((pos-1)%11, target.c)
+            nextSquare = Coord((pos+1)%BOARD_N, target.c)
+            prevSquare = Coord((pos-1)%BOARD_N, target.c)
         if board.get(square):
             count += 1     
         # If previous square is filled and current square is not filled
         if board.get(prevSquare) and (not board.get(square)):
-            segment.append(pos%11)
+            segment.append(pos%BOARD_N)
         # if current square is not filled and next square is filled
         if not board.get(square) and board.get(nextSquare) and segment:
-            segment.append(pos%11)
+            segment.append(pos%BOARD_N)
             if segment not in segments:
                 segments.append(segment)
             segment = []           
-    if count==22:
+    
+    # if completely filled for some reason
+    if count==BOARD_N*2:
         return []   
     
+    # If completely empty, return a segment representing entire row/column
     if not segments: 
         return [[1,0]]
     else: 
         return segments       
 
 
- # for rows and columns
-def dist_to_segment2(board, target, segment, row, distancesTo):
+ # finds shortest distances to segments
+def dist_to_segment(board, target, segment, row, distancesTo):
     if not segment: 
         return 0
     
@@ -361,87 +286,36 @@ def dist_to_segment2(board, target, segment, row, distancesTo):
     upperBound = segment[1] 
     lowerBound = segment[0]
     if segment[0] > segment[1]:
-        upperBound = segment[1] + 11
+        upperBound = segment[1] + BOARD_N
 
     for pos in range(lowerBound, upperBound + 1):
         if row:
-            square = Coord(target.r, pos%11)
+            square = Coord(target.r, pos%BOARD_N)
         else: 
-            square = Coord(pos%11, target.c)
+            square = Coord(pos%BOARD_N, target.c)
+        if not distancesTo.get(square):
+            distancesTo[square] = bfs(board, square)    
         distances.append(closestSquare(board, square, distancesTo))
-    result = min(distances) + 1 + upperBound - lowerBound     
-    return math.ceil((min(distances) + upperBound - lowerBound + 1)/4.0)   
+   
+    return math.ceil((min(distances) + upperBound - lowerBound + 1)/float(TETROMINO_SIZE))   
 
 
-
-
-
-# Returns number to be filled in row or column
-def toBeFilled(board, target, row):
-    count = 0
-    for pos in range(11):
-        if row:
-            square = Coord(target.r, pos)
-        else: 
-            square = Coord(pos, target.c)
-        if not board.get(square):
-            count += 1
-    return count        
-     
-
-
-def heuristic(node: Node, target: Coord, distancesTo):
-    # If target is gone
-    if not (node.board).get(target):
-        return len(node.prevActions)
-    
-    rowSegments = find_segments(node.board, target, row=True)
-    colSegments = find_segments(node.board, target, row=False)
-    adjacentSpaces = findAdjacent(node.board)
-    rowValue, colValue = 0, 0
-    #rows = []
-    #cols = []
-    for rowSegment in rowSegments:
-        if rowSegment:
-            rowValue += dist_to_segment2(node.board, target, rowSegment, True, distancesTo)
-            #rows.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))
-    for colSegment in colSegments:
-        if colSegment: 
-            colValue += dist_to_segment2(node.board, target, colSegment, False, distancesTo)
-            #cols.append(dist_to_segment2(node.board, target, rowSegment, True, distancesTo))
-    #print(rows, cols)       
-    return 1.001*min(rowValue, colValue) + len(node.prevActions)    
-    
-    
-# Finds distance between closest adjacent square to red and target   
+# Finds distance between closest adjacent square to red and square on a segment on target row/column 
 def closestSquare(board: dict[Coord, PlayerColor], target: Coord, distancesTo):
     adjacents = findAdjacent(board) 
-    # Will fix this later to not use an array, but keeping it here bcuz it's quick and easy
     distances = []
+    # Tracks distances between adjacent squares to red and square on target row or column
     for square in adjacents:
         distances.append((distancesTo[target])[square])
+    # If there were no distances
     if not distances: 
         return 0    
     return min(distances)
 
 
-
-def checkTarget(board: dict[Coord, PlayerColor], target: Coord):
-    # If target is removed
-    if not board.get(target):
-        return True
-    row = True
-    column = True
-    for pos in range(11):
-        # If it is empty
-        if not board.get(Coord(target.r, pos)):
-            row = False
-        if not board.get(Coord(pos, target.c)):
-            column = False    
-    return column or row
-        
-
-
+#***************************************************************************************************************#
+# Functions related to validity of moves and possible next moves to make from a board
+#***************************************************************************************************************#
 
 # Function to find all adjacent spaces to red tokens on board
 # Returns a list of Coords, if there are no adjacent spaces to a red token returns None
@@ -451,68 +325,130 @@ def findAdjacent(board: dict[Coord, PlayerColor]):
 
     # find all red tokens in board
     for coord, playercolor in board.items(): 
-        if board.get(coord, None) and playercolor == PlayerColor.RED: 
+        if board.get(coord) and playercolor == PlayerColor.RED: 
             redSpaces.append(coord) 
             
     # find all adjacent spaces to red tokens
     for coord in redSpaces:
         directions = [Direction.Down, Direction.Up, Direction.Left, Direction.Right]
         for direction in directions: 
-            if (isEmpty(board, coord + direction)) and coord + direction not in adjacentSpaces:
+            if (not board.get(coord + direction)) and coord + direction not in adjacentSpaces:
                 adjacentSpaces.append(coord + direction)
     return adjacentSpaces           
 
-
-
-def updateBoard(board, actions: PlaceAction):
-    newBoard = board.copy()
-    newBoard[actions.c1] = newBoard[actions.c2] = PlayerColor.RED
-    newBoard[actions.c3] = newBoard[actions.c4] = PlayerColor.RED
-    updateRowCol(board)
-    return newBoard 
 
 # Returns all possible positions that tetromino can be placed on square. Returns a 2D array. 
 # Can change it to contain PlaceActions later. Keeping it as a 2D array so it's easier to print and debug.
 def validMove(board, square: Coord, tetromino: [Coord]):
     total = []
     # If square is occupied, return
-    if not isEmpty(board, square):
+    if board.get(square):
         return []
     # Check if tetromino can be placed   
     # i represents orientation
     # j represents piece filled   
-    for i in range(4):
+    for orientation in range(TETROMINO_SIZE):
         valid = True
         actions = []
-        for j in range(4):
+        for piece in range(TETROMINO_SIZE):
             # Checks if block is filled. If filled, sets it to false
-            if not isEmpty(board, square - tetromino[i] + tetromino[j]):
+            if board.get(square - tetromino[orientation] + tetromino[piece]):
                 valid = False
             else: 
-                actions.append(square - tetromino[i] + tetromino[j])
+                actions.append(square - tetromino[orientation] + tetromino[piece])
         if valid:
             total.append(PlaceAction(actions[0], actions[1], actions[2], actions[3]))        
     return total
-                
+                    
+
+# Updates board based on tetrominos placed on board
+def updateBoard(board, actions: PlaceAction):
+    newBoard = board.copy()
+    newBoard[actions.c1] = newBoard[actions.c2] = PlayerColor.RED
+    newBoard[actions.c3] = newBoard[actions.c4] = PlayerColor.RED
+    # Will remove a row or column if filled
+    updateRowCol(newBoard)
+    return newBoard  
+
+# Returns number to be filled in row or column
+def toBeFilled(board, target, row):
+    count = 0
+    for pos in range(BOARD_N):
+        if row:
+            square = Coord(target.r, pos)
+        else: 
+            square = Coord(pos, target.c)
+        if not board.get(square):
+            count += 1
+    return count 
+
+# Find blue squares
+def findBlueSquares(board):
+    blueSquares = []
+    for key, colour in board.items():
+        if colour==PlayerColor.BLUE:
+            blueSquares.append(key)
+    return blueSquares        
+
+# Generates a list of removable blue squares
+def removeableBlueSquares(board):
+    blueSquares = findBlueSquares(board)
+    removableList = []
+    distance = {}
+    for blueSquare in blueSquares:
+        for pos in range(BOARD_N):
+            distance[Coord(blueSquare.r, pos)] = bfs(board, Coord(blueSquare.r, pos))
+            distance[Coord(pos, blueSquare.c)] = bfs(board, Coord(pos, blueSquare.c))
+        if remaining_moves(board, blueSquare, distance) < MAX_NUM_MOVES:
+            removableList.append(blueSquare)
+    return removableList
 
 
+#***************************************************************************************************************#
+# Functions for recursive case, where a different row/column has to be removed before the target row/column
+#***************************************************************************************************************#
+def repeatedSearch(
+    board: dict[Coord, PlayerColor], 
+    target: Coord, count, depth
+) -> list[PlaceAction] | None:
+    if count > depth:
+        return []
 
-# Checks if square on board is unoccupied
-def isEmpty(board: dict[Coord, PlayerColor], square: Coord):
-    # If occupied
-    if board.get(square, None):
-        return False
-    else: 
-        return True
+    removableList = removeableBlueSquares(board)
+    if not len(removableList):
+        return None
 
+    queue = []
+    for square in removableList:
+    # If it is minimum moves then do it
+        actions = search(board, square)
+        newBoard2 = board.copy()
+        
+        # Update the board
+        for action in actions: 
+            newBoard2 = updateBoard(newBoard2, action) 
+        newNode = Node(newBoard2, actions)
+        numMoves = remaining_moves(newBoard2, target) 
+        heapq.heappush(queue, (numMoves + len(newNode.prevActions) + 0.001*manhattan(target, square), newNode))
+        # Calculate number of moves to then get rid of now target
+    
+    while queue: 
+        output = heapq.heappop(queue)
+        if output[0] < MAX_NUM_MOVES: 
+            return output[1].prevActions + search(output[1].board, target)
+        else:
+            if count < depth:
+                if repeatedSearch(output[1].board, target, count+1, depth):
+                    return output[1].prevActions + repeatedSearch(output[1].board, target, count+1, depth)
+            else:
+                return []       
 
-
-# For debugging - prints out a list of placeActions, easier to read
-def printPlaceAction(items: [PlaceAction]):
-    for item in items: 
-        print(item.c1, item.c2, item.c3, item.c4)
-
-# For debugging
-def printAdjacentSquares(values):
-    for coord in values:
-        print(coord, end=",")
+# With wrapping included now
+def manhattan(target, square):
+    height = abs(target.r - square.r)
+    width = abs(target.c - square.c)
+    if height > BOARD_N//2:
+        height = BOARD_N- max(target.r, square.r) + min(target.r, square.r)
+    if width > BOARD_N//2:
+        width = BOARD_N - max(target.c, square.c) + min(target.c, square.c)
+    return math.ceil((width + height) / float(TETROMINO_SIZE)) 

@@ -54,7 +54,7 @@ def print_result(sequence: list[PlaceAction] | None):
     else:
         print(f"{SOLUTION_PREFIX} NOT_FOUND")
 
-
+firstTarget = 3
 def main():
     """
     Main entry point for program.
