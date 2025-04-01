@@ -123,7 +123,7 @@ def search(
     while priorityQueue:
         # Pop next node with lowest heuristic value
         expandedNode = heapq.heappop(priorityQueue)
-
+        print(render_board(expandedNode[1].board, target, ansi=True))
         # If target is removed
         if expandedNode and not expandedNode[1].board.get(target): 
             break
