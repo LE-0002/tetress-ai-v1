@@ -120,7 +120,8 @@ This is an example of how to list things you need to use the software and how to
    ```sh
    git clone https://github.com/LE-0002/tetress-ai-v1.git
    ```
-2. Ensure you have Docker installed and running. 
+2. Ensure you have Docker installed. Alternatively, install python and run via terminal as instructions specified below. 
+3. Attach the repository to a running Docker container. 
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -132,7 +133,7 @@ This is an example of how to list things you need to use the software and how to
 
 Run the solver with a test case: 
    ```sh
-   python -m search < test-case.csv
+   python -m search < test-cases/test-case.csv
    ```
 
 ## Input Format
