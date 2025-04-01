@@ -75,9 +75,6 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
 ### Overview
 This project implements a solver for a single-player variant of Tetress. The goal of the game is to place Red tokens strategically on the board to remove a target Blue token using the line removal rule. The solver finds the optimal sequence of moves that achieves this objective in the fewest possible actions.
 
@@ -123,7 +120,7 @@ This is an example of how to list things you need to use the software and how to
    ```sh
    git clone https://github.com/LE-0002/tetress-ai-v1.git
    ```
-2. Ensure you have Python 3.12 installed.
+2. Ensure you have Docker installed and running. 
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -154,9 +151,15 @@ The program outputs the optimal sequence of PLACE actions or None if no solution
 <!-- LICENSE -->
 ## License
 
-Distributed under the Unlicense License. See `LICENSE.txt` for more information.
+Distributed under the GNU License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+<!-- LICENSE -->
+## Acknowledgements
+* The University of Melbourne's School of Computing and Information Systems for the Tetress game specifications and base template code
+* <a href="https://www.flaticon.com/free-icons/tetris" title="tetris icons">Freepik</a> for the logo
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
